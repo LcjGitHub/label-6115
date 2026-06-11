@@ -4,6 +4,7 @@ export const CAMERA_STATUSES: CameraStatus[] = ["使用中", "维修中", "闲�
 
 export interface Camera {
   id: number;
+  brand: string;
   model: string;
   purchase_date: string;
   estimated_shutter_count: number;
@@ -20,6 +21,7 @@ export interface MaintenanceRecord {
 }
 
 export interface CameraFormData {
+  brand: string;
   model: string;
   purchase_date: string;
   estimated_shutter_count: number;

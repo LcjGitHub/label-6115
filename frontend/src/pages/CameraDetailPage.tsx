@@ -132,6 +132,7 @@ export default function CameraDetailPage() {
 
   const form = cameraForm ?? (camera
     ? {
+        brand: camera.brand,
         model: camera.model,
         purchase_date: camera.purchase_date,
         estimated_shutter_count: camera.estimated_shutter_count,
@@ -153,7 +154,7 @@ export default function CameraDetailPage() {
   }
 
   const handleCameraSave = () => {
-    if (!form.model.trim()) return;
+    if (!form.brand.trim() || !form.model.trim()) return;
     updateMutation.mutate(form);
   };
 
@@ -174,6 +175,13 @@ export default function CameraDetailPage() {
             相机详情
           </Typography>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+            <TextField
+              label="品牌"
+              value={form.brand}
+              onChange={(e) => {
+                setCameraForm({ ...form, brand: e.target.value });
+              }}
+            />
             <TextField
               label="型号"
               value={form.model}

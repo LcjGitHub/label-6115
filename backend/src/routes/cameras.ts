@@ -13,12 +13,18 @@ const router = Router();
 const VALID_STATUSES: CameraStatus[] = ["使用中", "维修中", "闲置"];
 
 router.get("/", (req, res) => {
-  const { status } = req.query;
+  const { status, modelKeyword, brand } = req.query;
   if (status && !VALID_STATUSES.includes(status as CameraStatus)) {
     res.status(400).json({ error: "无效的状态值，可选值为：使用中、维修中、闲置" });
     return;
   }
-  res.json(getAllCameras(status as CameraStatus | undefined));
+  res.json(
+    getAllCameras({
+      status: status as CameraStatus | undefined,
+      modelKeyword: modelKeyword as string | undefined,
+      brand: brand as string | undefined,
+    })
+  );
 });
 
 router.get("/:id", (req, res) => {
@@ -32,9 +38,9 @@ router.get("/:id", (req, res) => {
 });
 
 router.post("/", (req, res) => {
-  const { model, purchase_date, estimated_shutter_count, notes, status } = req.body;
-  if (!model || !purchase_date) {
-    res.status(400).json({ error: "型号和购入日期为必填项" });
+  const { brand, model, purchase_date, estimated_shutter_count, notes, status } = req.body;
+  if (!brand || !model || !purchase_date) {
+    res.status(400).json({ error: "品牌、型号和购入日期为必填项" });
     return;
   }
   if (status && !VALID_STATUSES.includes(status as CameraStatus)) {
@@ -42,6 +48,7 @@ router.post("/", (req, res) => {
     return;
   }
   const camera = createCamera({
+    brand,
     model,
     purchase_date,
     estimated_shutter_count: Number(estimated_shutter_count) || 0,
@@ -53,9 +60,9 @@ router.post("/", (req, res) => {
 
 router.put("/:id", (req, res) => {
   const id = Number(req.params.id);
-  const { model, purchase_date, estimated_shutter_count, notes, status } = req.body;
-  if (!model || !purchase_date) {
-    res.status(400).json({ error: "型号和购入日期为必填项" });
+  const { brand, model, purchase_date, estimated_shutter_count, notes, status } = req.body;
+  if (!brand || !model || !purchase_date) {
+    res.status(400).json({ error: "品牌、型号和购入日期为必填项" });
     return;
   }
   if (status && !VALID_STATUSES.includes(status as CameraStatus)) {
@@ -63,6 +70,7 @@ router.put("/:id", (req, res) => {
     return;
   }
   const camera = updateCamera(id, {
+    brand,
     model,
     purchase_date,
     estimated_shutter_count: Number(estimated_shutter_count) || 0,

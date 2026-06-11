@@ -16,6 +16,7 @@ export type CameraStatus = "使用中" | "维修中" | "闲置";
 
 export interface Camera {
   id: number;
+  brand: string;
   model: string;
   purchase_date: string;
   estimated_shutter_count: number;
@@ -67,6 +68,7 @@ export function initDb(): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS cameras (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      brand TEXT NOT NULL,
       model TEXT NOT NULL,
       purchase_date TEXT NOT NULL,
       estimated_shutter_count INTEGER NOT NULL DEFAULT 0,
@@ -122,6 +124,12 @@ export function initDb(): void {
   const camColumns = db
     .prepare("PRAGMA table_info(cameras)")
     .all() as { name: string }[];
+  const hasBrandColumn = camColumns.some((col) => col.name === "brand");
+  if (!hasBrandColumn) {
+    db.exec(`
+      ALTER TABLE cameras ADD COLUMN brand TEXT NOT NULL DEFAULT '';
+    `);
+  }
   const hasStatusColumn = camColumns.some((col) => col.name === "status");
   if (!hasStatusColumn) {
     db.exec(`
@@ -158,8 +166,8 @@ export function initDb(): void {
 
 function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean): void {
   const insertCamera = db.prepare(`
-    INSERT INTO cameras (model, purchase_date, estimated_shutter_count, notes, status)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   const insertMaintenance = db.prepare(`
@@ -192,8 +200,8 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
     let cam2Id: number | bigint = 0;
 
     if (seedCameras) {
-      const cam1 = insertCamera.run("Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "维修中");
-      const cam2 = insertCamera.run("Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机", "闲置");
+      const cam1 = insertCamera.run("佳能", "Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "维修中");
+      const cam2 = insertCamera.run("新索尼", "Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机", "闲置");
       cam1Id = cam1.lastInsertRowid;
       cam2Id = cam2.lastInsertRowid;
 
@@ -239,11 +247,25 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
   seed();
 }
 
-export function getAllCameras(status?: CameraStatus): Camera[] {
-  if (status) {
-    return db.prepare("SELECT * FROM cameras WHERE status = ? ORDER BY id").all(status) as Camera[];
+export function getAllCameras(options?: { status?: CameraStatus; modelKeyword?: string; brand?: string }): Camera[] {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (options?.status) {
+    conditions.push("status = ?");
+    params.push(options.status);
   }
-  return db.prepare("SELECT * FROM cameras ORDER BY id").all() as Camera[];
+  if (options?.modelKeyword) {
+    conditions.push("model LIKE ?");
+    params.push(`%${options.modelKeyword}%`);
+  }
+  if (options?.brand) {
+    conditions.push("brand = ?");
+    params.push(options.brand);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  return db.prepare(`SELECT * FROM cameras ${whereClause} ORDER BY id`).all(...params) as Camera[];
 }
 
 export function getCameraById(id: number): Camera | undefined {
@@ -253,10 +275,10 @@ export function getCameraById(id: number): Camera | undefined {
 export function createCamera(data: Omit<Camera, "id">): Camera {
   const result = db
     .prepare(
-      `INSERT INTO cameras (model, purchase_date, estimated_shutter_count, notes, status)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中");
+    .run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中");
   return getCameraById(Number(result.lastInsertRowid))!;
 }
 
@@ -265,9 +287,9 @@ export function updateCamera(id: number, data: Omit<Camera, "id">): Camera | und
   if (!existing) return undefined;
 
   db.prepare(
-    `UPDATE cameras SET model = ?, purchase_date = ?, estimated_shutter_count = ?, notes = ?, status = ?
+    `UPDATE cameras SET brand = ?, model = ?, purchase_date = ?, estimated_shutter_count = ?, notes = ?, status = ?
      WHERE id = ?`
-  ).run(data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中", id);
+  ).run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中", id);
 
   return getCameraById(id);
 }

@@ -17,9 +17,12 @@ import type {
 
 const api = axios.create({ baseURL: "/api" });
 
-export async function fetchCameras(status?: string): Promise<Camera[]> {
-  const params = status ? { status } : {};
-  const { data } = await api.get<Camera[]>("/cameras", { params });
+export async function fetchCameras(params?: {
+  status?: string;
+  modelKeyword?: string;
+  brand?: string;
+}): Promise<Camera[]> {
+  const { data } = await api.get<Camera[]>("/cameras", { params: params || {} });
   return data;
 }
 

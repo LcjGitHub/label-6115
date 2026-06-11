@@ -62,7 +62,7 @@ export default function LensAccessoryPage() {
 
   const { data: cameras = [], isLoading: camerasLoading } = useQuery({
     queryKey: ["cameras"],
-    queryFn: fetchCameras,
+    queryFn: () => fetchCameras(),
   });
 
   const cameraMap = useMemo(() => {

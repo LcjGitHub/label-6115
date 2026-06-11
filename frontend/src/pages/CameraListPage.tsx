@@ -30,6 +30,7 @@ import { createCamera, deleteCamera, fetchCameras } from "../api/client";
 import { CAMERA_STATUSES, type CameraFormData, type CameraStatus } from "../types";
 
 const emptyForm: CameraFormData = {
+  brand: "",
   model: "",
   purchase_date: dayjs().format("YYYY-MM-DD"),
   estimated_shutter_count: 0,
@@ -57,6 +58,8 @@ export default function CameraListPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CameraFormData>(emptyForm);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [modelKeyword, setModelKeyword] = useState<string>("");
+  const [brandFilter, setBrandFilter] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,9 +72,20 @@ export default function CameraListPage() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["cameras", statusFilter],
-    queryFn: () => fetchCameras(statusFilter || undefined),
+    queryKey: ["cameras", statusFilter, modelKeyword, brandFilter],
+    queryFn: () =>
+      fetchCameras({
+        status: statusFilter || undefined,
+        modelKeyword: modelKeyword || undefined,
+        brand: brandFilter || undefined,
+      }),
   });
+
+  const uniqueBrands = useMemo(() => {
+    const brands = new Set<string>();
+    cameras.forEach((c) => c.brand && brands.add(c.brand));
+    return Array.from(brands).sort();
+  }, [cameras]);
 
   const createMutation = useMutation({
     mutationFn: createCamera,
@@ -95,6 +109,7 @@ export default function CameraListPage() {
 
   const columns: GridColDef[] = useMemo(
     () => [
+      { field: "brand", headerName: "品牌", width: 110 },
       { field: "model", headerName: "型号", flex: 1, minWidth: 160 },
       {
         field: "purchase_date",
@@ -162,7 +177,7 @@ export default function CameraListPage() {
   );
 
   const handleSubmit = () => {
-    if (!form.model.trim()) return;
+    if (!form.brand.trim() || !form.model.trim()) return;
     createMutation.mutate(form);
   };
 
@@ -173,6 +188,29 @@ export default function CameraListPage() {
           相机列表
         </Typography>
         <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <TextField
+            label="型号搜索"
+            size="small"
+            value={modelKeyword}
+            onChange={(e) => setModelKeyword(e.target.value)}
+            sx={{ minWidth: 180 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel id="brand-filter-label">品牌筛选</InputLabel>
+            <Select
+              labelId="brand-filter-label"
+              value={brandFilter}
+              label="品牌筛选"
+              onChange={(e) => setBrandFilter(e.target.value)}
+            >
+              <MenuItem value="">全部</MenuItem>
+              {uniqueBrands.map((brand) => (
+                <MenuItem key={brand} value={brand}>
+                  {brand}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel id="status-filter-label">状态筛选</InputLabel>
             <Select
@@ -227,6 +265,12 @@ export default function CameraListPage() {
         <DialogTitle>新增相机</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           <TextField
+            label="品牌"
+            required
+            value={form.brand}
+            onChange={(e) => setForm({ ...form, brand: e.target.value })}
+          />
+          <TextField
             label="型号"
             required
             value={form.model}
@@ -273,7 +317,7 @@ export default function CameraListPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={handleSubmit} disabled={!form.model.trim()}>
+          <Button variant="contained" onClick={handleSubmit} disabled={!form.brand.trim() || !form.model.trim()}>
             保存
           </Button>
         </DialogActions>

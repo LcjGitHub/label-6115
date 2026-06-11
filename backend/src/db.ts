@@ -331,6 +331,23 @@ export function deleteMaintenance(id: number): boolean {
   return result.changes > 0;
 }
 
+export function updateMaintenance(
+  id: number,
+  data: { maintenance_date: string; content: string; cost?: number }
+): MaintenanceRecord | undefined {
+  const existing = db.prepare("SELECT * FROM maintenance_records WHERE id = ?").get(id) as
+    | MaintenanceRecord
+    | undefined;
+  if (!existing) return undefined;
+
+  db.prepare(
+    `UPDATE maintenance_records SET maintenance_date = ?, content = ?, cost = ?
+     WHERE id = ?`
+  ).run(data.maintenance_date, data.content, data.cost ?? existing.cost, id);
+
+  return db.prepare("SELECT * FROM maintenance_records WHERE id = ?").get(id) as MaintenanceRecord;
+}
+
 export function getMaintenanceTotalCostByCameraId(cameraId: number): number {
   const row = db
     .prepare("SELECT COALESCE(SUM(cost), 0) as total FROM maintenance_records WHERE camera_id = ?")

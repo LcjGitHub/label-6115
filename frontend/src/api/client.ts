@@ -63,6 +63,14 @@ export async function createMaintenance(
   return data;
 }
 
+export async function updateMaintenance(
+  id: number,
+  payload: MaintenanceFormData
+): Promise<MaintenanceRecord> {
+  const { data } = await api.put<MaintenanceRecord>(`/maintenance/${id}`, payload);
+  return data;
+}
+
 export async function deleteMaintenance(id: number): Promise<void> {
   await api.delete(`/maintenance/${id}`);
 }

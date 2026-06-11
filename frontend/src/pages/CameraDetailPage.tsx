@@ -1,6 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import {
   Alert,
   Autocomplete,
@@ -10,6 +11,10 @@ import {
   CardContent,
   CircularProgress,
   createFilterOptions,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   FormControl,
   IconButton,
@@ -36,7 +41,9 @@ import {
   fetchMaintenanceTotalCost,
   fetchMaintenanceTypes,
   updateCamera,
+  updateMaintenance,
 } from "../api/client";
+import type { MaintenanceRecord } from "../types";
 import { CAMERA_STATUSES, type CameraFormData, type CameraStatus, type MaintenanceFormData } from "../types";
 
 const filterOptions = createFilterOptions<string>({
@@ -60,6 +67,12 @@ export default function CameraDetailPage() {
   const [cameraForm, setCameraForm] = useState<CameraFormData | null>(null);
   const [maintenanceForm, setMaintenanceForm] = useState<MaintenanceFormData>({
     maintenance_date: dayjs().format("YYYY-MM-DD"),
+    content: "",
+    cost: 0,
+  });
+  const [editingRecord, setEditingRecord] = useState<MaintenanceRecord | null>(null);
+  const [editForm, setEditForm] = useState<MaintenanceFormData>({
+    maintenance_date: "",
     content: "",
     cost: 0,
   });
@@ -130,6 +143,19 @@ export default function CameraDetailPage() {
     },
   });
 
+  const updateMaintenanceMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: MaintenanceFormData }) =>
+      updateMaintenance(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance", cameraId] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-total-cost", cameraId] });
+      setEditingRecord(null);
+    },
+    onError: (err) => {
+      setErrorMsg("更新保养失败：" + getErrorMsg(err, "请稍后重试"));
+    },
+  });
+
   const form = cameraForm ?? (camera
     ? {
         brand: camera.brand,
@@ -161,6 +187,20 @@ export default function CameraDetailPage() {
   const handleAddMaintenance = () => {
     if (!maintenanceForm.content.trim()) return;
     createMaintenanceMutation.mutate(maintenanceForm);
+  };
+
+  const handleEditClick = (record: MaintenanceRecord) => {
+    setEditingRecord(record);
+    setEditForm({
+      maintenance_date: record.maintenance_date,
+      content: record.content,
+      cost: record.cost,
+    });
+  };
+
+  const handleUpdateMaintenance = () => {
+    if (!editingRecord || !editForm.content.trim()) return;
+    updateMaintenanceMutation.mutate({ id: editingRecord.id, payload: editForm });
   };
 
   return (
@@ -320,17 +360,26 @@ export default function CameraDetailPage() {
                 <ListItem
                   key={record.id}
                   secondaryAction={
-                    <IconButton
-                      edge="end"
-                      color="error"
-                      onClick={() => {
-                        if (window.confirm("确定删除该保养记录？")) {
-                          deleteMaintenanceMutation.mutate(record.id);
-                        }
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
+                    <Box sx={{ display: "flex", gap: 0.5 }}>
+                      <IconButton
+                        edge="end"
+                        color="primary"
+                        onClick={() => handleEditClick(record)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        color="error"
+                        onClick={() => {
+                          if (window.confirm("确定删除该保养记录？")) {
+                            deleteMaintenanceMutation.mutate(record.id);
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
                   }
                   sx={{ bgcolor: "grey.50", mb: 1, borderRadius: 1 }}
                 >
@@ -351,6 +400,59 @@ export default function CameraDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>编辑保养记录</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <TextField
+              label="保养日期"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={editForm.maintenance_date}
+              onChange={(e) =>
+                setEditForm({ ...editForm, maintenance_date: e.target.value })
+              }
+            />
+            <Autocomplete
+              freeSolo
+              options={maintenanceTypes.map((t) => t.type_name)}
+              filterOptions={filterOptions}
+              value={editForm.content}
+              onInputChange={(_e, value) =>
+                setEditForm({ ...editForm, content: value })
+              }
+              renderInput={(params) => (
+                <TextField {...params} label="保养内容" />
+              )}
+            />
+            <TextField
+              label="费用(元)"
+              type="number"
+              inputProps={{ min: 0 }}
+              value={editForm.cost}
+              onChange={(e) =>
+                setEditForm({ ...editForm, cost: Number(e.target.value) || 0 })
+              }
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditingRecord(null)}>取消</Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateMaintenance}
+            disabled={!editForm.content.trim() || updateMaintenanceMutation.isPending}
+          >
+            确认修改
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={!!errorMsg}

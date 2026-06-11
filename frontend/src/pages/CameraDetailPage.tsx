@@ -26,6 +26,7 @@ import {
   Select,
   Snackbar,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -199,7 +200,7 @@ export default function CameraDetailPage() {
   };
 
   const handleUpdateMaintenance = () => {
-    if (!editingRecord || !editForm.content.trim()) return;
+    if (!editingRecord || !editForm.maintenance_date.trim() || !editForm.content.trim()) return;
     updateMaintenanceMutation.mutate({ id: editingRecord.id, payload: editForm });
   };
 
@@ -361,16 +362,20 @@ export default function CameraDetailPage() {
                   key={record.id}
                   secondaryAction={
                     <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <IconButton
-                        edge="end"
-                        color="primary"
-                        onClick={() => handleEditClick(record)}
-                      >
-                        <EditIcon />
-                      </IconButton>
+                      <Tooltip title="编辑">
+                        <IconButton
+                          edge="end"
+                          color="primary"
+                          disabled={updateMaintenanceMutation.isPending}
+                          onClick={() => handleEditClick(record)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
                       <IconButton
                         edge="end"
                         color="error"
+                        disabled={updateMaintenanceMutation.isPending}
                         onClick={() => {
                           if (window.confirm("确定删除该保养记录？")) {
                             deleteMaintenanceMutation.mutate(record.id);
@@ -447,7 +452,7 @@ export default function CameraDetailPage() {
           <Button
             variant="contained"
             onClick={handleUpdateMaintenance}
-            disabled={!editForm.content.trim() || updateMaintenanceMutation.isPending}
+            disabled={!editForm.maintenance_date.trim() || !editForm.content.trim() || updateMaintenanceMutation.isPending}
           >
             确认修改
           </Button>

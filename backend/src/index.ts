@@ -9,26 +9,32 @@ import shutterCountsRouter from "./routes/shutterCounts";
 import statisticsRouter from "./routes/statistics";
 import usageLogsRouter from "./routes/usageLogs";
 
-const PORT = 6000;
+export function createApp(): express.Express {
+  initDb();
 
-initDb();
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+  app.use("/api/cameras", camerasRouter);
+  app.use("/api/lens-accessories", lensAccessoriesRouter);
+  app.use("/api", maintenanceRouter);
+  app.use("/api/maintenance-types", maintenanceTypesRouter);
+  app.use("/api/shutter-counts", shutterCountsRouter);
+  app.use("/api/statistics", statisticsRouter);
+  app.use("/api/usage-logs", usageLogsRouter);
 
-app.use("/api/cameras", camerasRouter);
-app.use("/api/lens-accessories", lensAccessoriesRouter);
-app.use("/api", maintenanceRouter);
-app.use("/api/maintenance-types", maintenanceTypesRouter);
-app.use("/api/shutter-counts", shutterCountsRouter);
-app.use("/api/statistics", statisticsRouter);
-app.use("/api/usage-logs", usageLogsRouter);
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
-});
+  return app;
+}
 
-app.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  const PORT = 6000;
+  const app = createApp();
+  app.listen(PORT, () => {
+    console.log(`Backend running at http://localhost:${PORT}`);
+  });
+}

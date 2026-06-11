@@ -2,15 +2,52 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 
-const dataDir = path.join(__dirname, "..", "data");
-const dbPath = path.join(dataDir, "cameras.db");
+let db: Database.Database;
+let currentDbPath: string;
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+export function initializeDb(customDbPath?: string): Database.Database {
+  if (db) {
+    return db;
+  }
+
+  if (customDbPath) {
+    currentDbPath = customDbPath;
+  } else {
+    const dataDir = path.join(__dirname, "..", "data");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    currentDbPath = path.join(dataDir, "cameras.db");
+  }
+
+  const dbDir = path.dirname(currentDbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  db = new Database(currentDbPath);
+  getDb().pragma("journal_mode = WAL");
+  getDb().pragma("foreign_keys = ON");
+
+  return db;
 }
 
-const db = new Database(dbPath);
-db.pragma("journal_mode = WAL");
+export function closeDb(): void {
+  if (db) {
+    getDb().close();
+  }
+  (db as any) = undefined;
+  (currentDbPath as any) = undefined;
+}
+
+export function getDb(): Database.Database {
+  if (!db) {
+    initializeDb();
+  }
+  return db;
+}
+
+initializeDb();
 
 export type CameraStatus = "使用中" | "维修中" | "闲置";
 
@@ -67,7 +104,8 @@ export interface UsageLog {
 }
 
 export function initDb(): void {
-  db.exec(`
+  const database = getDb();
+  database.exec(`
     CREATE TABLE IF NOT EXISTS cameras (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       brand TEXT NOT NULL,
@@ -124,45 +162,45 @@ export function initDb(): void {
     );
   `);
 
-  const camColumns = db
+  const camColumns = database
     .prepare("PRAGMA table_info(cameras)")
     .all() as { name: string }[];
   const hasBrandColumn = camColumns.some((col) => col.name === "brand");
   if (!hasBrandColumn) {
-    db.exec(`
+    database.exec(`
       ALTER TABLE cameras ADD COLUMN brand TEXT NOT NULL DEFAULT '';
     `);
-    const backfillBrand = db.prepare("UPDATE cameras SET brand = ? WHERE model = ?");
+    const backfillBrand = database.prepare("UPDATE cameras SET brand = ? WHERE model = ?");
     backfillBrand.run("佳能", "Canon EOS R5");
     backfillBrand.run("新索尼", "Sony A7 IV");
   }
   const hasStatusColumn = camColumns.some((col) => col.name === "status");
   if (!hasStatusColumn) {
-    db.exec(`
+    database.exec(`
       ALTER TABLE cameras ADD COLUMN status TEXT NOT NULL DEFAULT '使用中';
     `);
   }
 
   const hasRatedShutterLifeColumn = camColumns.some((col) => col.name === "rated_shutter_life");
   if (!hasRatedShutterLifeColumn) {
-    db.exec(`
+    database.exec(`
       ALTER TABLE cameras ADD COLUMN rated_shutter_life INTEGER NOT NULL DEFAULT 200000;
     `);
-    const backfillRated = db.prepare("UPDATE cameras SET rated_shutter_life = ? WHERE model = ?");
+    const backfillRated = database.prepare("UPDATE cameras SET rated_shutter_life = ? WHERE model = ?");
     backfillRated.run(300000, "Canon EOS R5");
     backfillRated.run(200000, "Sony A7 IV");
   }
 
-  const mrColumns = db
+  const mrColumns = database
     .prepare("PRAGMA table_info(maintenance_records)")
     .all() as { name: string }[];
   const hasCostColumn = mrColumns.some((col) => col.name === "cost");
   if (!hasCostColumn) {
-    db.exec(`
+    database.exec(`
       ALTER TABLE maintenance_records ADD COLUMN cost REAL NOT NULL DEFAULT 0;
     `);
 
-    const backfill = db.prepare(
+    const backfill = database.prepare(
       "UPDATE maintenance_records SET cost = ? WHERE content = ?"
     );
     backfill.run(280, "传感器清洁 + 固件升级");
@@ -171,47 +209,48 @@ export function initDb(): void {
     backfill.run(120, "卡口与触点清洁保养");
   }
 
-  const camCount = db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number };
-  const mtCount = db.prepare("SELECT COUNT(*) as c FROM maintenance_types").get() as { c: number };
-  const laCount = db.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
-  const ulCount = db.prepare("SELECT COUNT(*) as c FROM usage_logs").get() as { c: number };
+  const camCount = database.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number };
+  const mtCount = database.prepare("SELECT COUNT(*) as c FROM maintenance_types").get() as { c: number };
+  const laCount = database.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
+  const ulCount = database.prepare("SELECT COUNT(*) as c FROM usage_logs").get() as { c: number };
   if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0) {
     seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0);
   }
 }
 
 function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean): void {
-  const insertCamera = db.prepare(`
+  const database = getDb();
+  const insertCamera = database.prepare(`
     INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const insertMaintenance = db.prepare(`
+  const insertMaintenance = database.prepare(`
     INSERT INTO maintenance_records (camera_id, maintenance_date, content, cost)
     VALUES (?, ?, ?, ?)
   `);
 
-  const insertShutterCount = db.prepare(`
+  const insertShutterCount = database.prepare(`
     INSERT INTO shutter_counts (camera_id, record_date, shutter_increment, notes)
     VALUES (?, ?, ?, ?)
   `);
 
-  const insertMaintenanceType = db.prepare(`
+  const insertMaintenanceType = database.prepare(`
     INSERT INTO maintenance_types (type_name, category, description)
     VALUES (?, ?, ?)
   `);
 
-  const insertLensAccessory = db.prepare(`
+  const insertLensAccessory = database.prepare(`
     INSERT INTO lens_accessories (camera_id, accessory_name, focal_length_description, purchase_date, notes)
     VALUES (?, ?, ?, ?, ?)
   `);
 
-  const insertUsageLog = db.prepare(`
+  const insertUsageLog = database.prepare(`
     INSERT INTO usage_logs (camera_id, record_date, content, recorder)
     VALUES (?, ?, ?, ?)
   `);
 
-  const seed = db.transaction(() => {
+  const seed = database.transaction(() => {
     let cam1Id: number | bigint = 0;
     let cam2Id: number | bigint = 0;
 
@@ -231,7 +270,7 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
       insertShutterCount.run(cam2Id, "2024-10-05", 600, "街拍");
       insertShutterCount.run(cam2Id, "2024-12-01", 450, "活动拍摄");
     } else {
-      const cameras = db.prepare("SELECT id FROM cameras ORDER BY id LIMIT 2").all() as { id: number }[];
+      const cameras = database.prepare("SELECT id FROM cameras ORDER BY id LIMIT 2").all() as { id: number }[];
       if (cameras.length >= 2) {
         cam1Id = cameras[0].id;
         cam2Id = cameras[1].id;
@@ -281,7 +320,7 @@ export function getAllCameras(options?: { status?: CameraStatus; modelKeyword?: 
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const rows = db.prepare(`SELECT * FROM cameras ${whereClause} ORDER BY id`).all(...params) as (Omit<Camera, "shutter_warning"> & { rated_shutter_life: number })[];
+  const rows = getDb().prepare(`SELECT * FROM cameras ${whereClause} ORDER BY id`).all(...params) as (Omit<Camera, "shutter_warning"> & { rated_shutter_life: number })[];
   return rows.map((row) => ({
     ...row,
     shutter_warning: row.estimated_shutter_count >= row.rated_shutter_life * 0.8,
@@ -289,7 +328,7 @@ export function getAllCameras(options?: { status?: CameraStatus; modelKeyword?: 
 }
 
 export function getCameraById(id: number): Camera | undefined {
-  const row = db.prepare("SELECT * FROM cameras WHERE id = ?").get(id) as (Omit<Camera, "shutter_warning"> & { rated_shutter_life: number }) | undefined;
+  const row = getDb().prepare("SELECT * FROM cameras WHERE id = ?").get(id) as (Omit<Camera, "shutter_warning"> & { rated_shutter_life: number }) | undefined;
   if (!row) return undefined;
   return {
     ...row,
@@ -312,7 +351,7 @@ export function updateCamera(id: number, data: Omit<Camera, "id" | "shutter_warn
   const existing = getCameraById(id);
   if (!existing) return undefined;
 
-  db.prepare(
+  getDb().prepare(
     `UPDATE cameras SET brand = ?, model = ?, purchase_date = ?, estimated_shutter_count = ?, notes = ?, status = ?, rated_shutter_life = ?
      WHERE id = ?`
   ).run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中", data.rated_shutter_life ?? 200000, id);
@@ -321,7 +360,7 @@ export function updateCamera(id: number, data: Omit<Camera, "id" | "shutter_warn
 }
 
 export function deleteCamera(id: number): boolean {
-  const result = db.prepare("DELETE FROM cameras WHERE id = ?").run(id);
+  const result = getDb().prepare("DELETE FROM cameras WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
@@ -350,7 +389,7 @@ export function createMaintenance(
 }
 
 export function deleteMaintenance(id: number): boolean {
-  const result = db.prepare("DELETE FROM maintenance_records WHERE id = ?").run(id);
+  const result = getDb().prepare("DELETE FROM maintenance_records WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
@@ -358,17 +397,17 @@ export function updateMaintenance(
   id: number,
   data: { maintenance_date: string; content: string; cost?: number }
 ): MaintenanceRecord | undefined {
-  const existing = db.prepare("SELECT * FROM maintenance_records WHERE id = ?").get(id) as
+  const existing = getDb().prepare("SELECT * FROM maintenance_records WHERE id = ?").get(id) as
     | MaintenanceRecord
     | undefined;
   if (!existing) return undefined;
 
-  db.prepare(
+  getDb().prepare(
     `UPDATE maintenance_records SET maintenance_date = ?, content = ?, cost = ?
      WHERE id = ?`
   ).run(data.maintenance_date, data.content, data.cost ?? existing.cost, id);
 
-  return db.prepare("SELECT * FROM maintenance_records WHERE id = ?").get(id) as MaintenanceRecord;
+  return getDb().prepare("SELECT * FROM maintenance_records WHERE id = ?").get(id) as MaintenanceRecord;
 }
 
 export function getMaintenanceTotalCostByCameraId(cameraId: number): number {
@@ -407,7 +446,7 @@ export function createShutterCount(
 }
 
 export function deleteShutterCount(id: number): boolean {
-  const result = db.prepare("DELETE FROM shutter_counts WHERE id = ?").run(id);
+  const result = getDb().prepare("DELETE FROM shutter_counts WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
@@ -425,11 +464,11 @@ export interface StatisticsOverview {
 
 export function getStatisticsOverview(): StatisticsOverview {
   const totalCameras = (
-    db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number }
+    getDb().prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number }
   ).c;
 
   const totalMaintenanceRecords = (
-    db.prepare("SELECT COUNT(*) as c FROM maintenance_records").get() as { c: number }
+    getDb().prepare("SELECT COUNT(*) as c FROM maintenance_records").get() as { c: number }
   ).c;
 
   const highShutterCameras = (
@@ -453,7 +492,7 @@ export function getStatisticsOverview(): StatisticsOverview {
 }
 
 export function getAllMaintenanceTypes(): MaintenanceType[] {
-  return db.prepare("SELECT * FROM maintenance_types ORDER BY id").all() as MaintenanceType[];
+  return getDb().prepare("SELECT * FROM maintenance_types ORDER BY id").all() as MaintenanceType[];
 }
 
 export function createMaintenanceType(
@@ -511,7 +550,7 @@ export function createLensAccessory(
 }
 
 export function deleteLensAccessory(id: number): boolean {
-  const result = db.prepare("DELETE FROM lens_accessories WHERE id = ?").run(id);
+  const result = getDb().prepare("DELETE FROM lens_accessories WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
@@ -534,9 +573,9 @@ export function createUsageLog(
     )
     .run(cameraId, data.record_date, data.content, data.recorder);
 
-  return db
+  return getDb()
     .prepare("SELECT * FROM usage_logs WHERE id = ?")
     .get(result.lastInsertRowid) as UsageLog;
 }
 
-export default db;
+export default getDb();

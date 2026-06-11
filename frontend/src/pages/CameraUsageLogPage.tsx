@@ -50,7 +50,7 @@ export default function CameraUsageLogPage() {
     return () => setErrorMsg(null);
   }, []);
 
-  const { data: camera } = useQuery({
+  const { data: camera, isLoading: cameraLoading, isError: cameraError } = useQuery({
     queryKey: ["camera", cameraId],
     queryFn: () => fetchCamera(cameraId),
     enabled: !!cameraId,
@@ -88,12 +88,17 @@ export default function CameraUsageLogPage() {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/")}>
           返回列表
         </Button>
-        <Typography variant="h5" fontWeight={600}>
-          {camera ? `${camera.model} - 使用日志` : "使用日志"}
-        </Typography>
+        {cameraLoading ? (
+          <CircularProgress size={24} sx={{ ml: 1 }} />
+        ) : (
+          <Typography variant="h5" fontWeight={600}>
+            {camera ? `${camera.model} - 使用日志` : "使用日志"}
+          </Typography>
+        )}
       </Box>
 
-      {isError && <Alert severity="error" sx={{ mb: 2 }}>加载失败，请确认后端已启动</Alert>}
+      {cameraError && <Alert severity="error" sx={{ mb: 2 }}>相机不存在，请确认编号正确</Alert>}
+      {isError && !cameraError && <Alert severity="error" sx={{ mb: 2 }}>加载失败，请确认后端已启动</Alert>}
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
@@ -101,10 +106,14 @@ export default function CameraUsageLogPage() {
             日志记录
           </Typography>
           <Divider sx={{ mb: 1 }} />
-          {isLoading ? (
+          {isLoading || cameraLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
               <CircularProgress size={28} />
             </Box>
+          ) : cameraError ? (
+            <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
+              相机不存在，无法加载日志
+            </Typography>
           ) : logs.length === 0 ? (
             <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
               暂无使用日志
@@ -170,7 +179,7 @@ export default function CameraUsageLogPage() {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={!form.record_date.trim() || !form.content.trim() || !form.recorder.trim()}
+                disabled={!form.record_date.trim() || !form.content.trim() || !form.recorder.trim() || createMutation.isPending}
               >
                 提交
               </Button>

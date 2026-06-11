@@ -186,13 +186,20 @@ export default function ShutterCountPage() {
 
       <Box sx={{ height: 420, bgcolor: "background.paper", borderRadius: 1 }}>
         <DataGrid
-          rows={records}
+          rows={isLoading ? [] : records}
           columns={columns}
           loading={isLoading}
           disableRowSelectionOnClick
           pageSizeOptions={[5, 10]}
           initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
           sx={{ border: "none" }}
+          localeText={{
+            MuiTablePagination: {
+              labelRowsPerPage: "每页行数",
+              labelDisplayedRows: ({ from, to, count }) =>
+                count === -1 ? `${from}–${to} 共 ${to}` : `${from}–${to} 共 ${count}`,
+            },
+          }}
         />
       </Box>
 

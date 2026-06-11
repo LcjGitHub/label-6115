@@ -129,7 +129,7 @@ export default function CameraListPage() {
 
       <Box sx={{ height: 420, bgcolor: "background.paper", borderRadius: 1 }}>
         <DataGrid
-          rows={cameras}
+          rows={isLoading ? [] : cameras}
           columns={columns}
           loading={isLoading}
           disableRowSelectionOnClick
@@ -137,6 +137,13 @@ export default function CameraListPage() {
           initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
           onRowClick={(params) => navigate(`/cameras/${params.row.id}`)}
           sx={{ cursor: "pointer", border: "none" }}
+          localeText={{
+            MuiTablePagination: {
+              labelRowsPerPage: "每页行数",
+              labelDisplayedRows: ({ from, to, count }) =>
+                count === -1 ? `${from}–${to} 共 ${to}` : `${from}–${to} 共 ${count}`,
+            },
+          }}
         />
       </Box>
 

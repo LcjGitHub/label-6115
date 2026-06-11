@@ -53,6 +53,23 @@ export interface ShutterCountFormData {
   notes: string;
 }
 
+export interface LensAccessory {
+  id: number;
+  camera_id: number;
+  accessory_name: string;
+  focal_length_description: string;
+  purchase_date: string;
+  notes: string;
+}
+
+export interface LensAccessoryFormData {
+  camera_id: number;
+  accessory_name: string;
+  focal_length_description: string;
+  purchase_date: string;
+  notes: string;
+}
+
 export interface ModelCount {
   model: string;
   count: number;

@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { initDb } from "./db";
 import camerasRouter from "./routes/cameras";
+import lensAccessoriesRouter from "./routes/lensAccessories";
 import maintenanceRouter from "./routes/maintenance";
 import maintenanceTypesRouter from "./routes/maintenanceTypes";
 import shutterCountsRouter from "./routes/shutterCounts";
@@ -16,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/cameras", camerasRouter);
+app.use("/api/lens-accessories", lensAccessoriesRouter);
 app.use("/api", maintenanceRouter);
 app.use("/api/maintenance-types", maintenanceTypesRouter);
 app.use("/api/shutter-counts", shutterCountsRouter);

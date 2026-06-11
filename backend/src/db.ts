@@ -42,6 +42,15 @@ export interface ShutterCountRecord {
   notes: string;
 }
 
+export interface LensAccessory {
+  id: number;
+  camera_id: number;
+  accessory_name: string;
+  focal_length_description: string;
+  purchase_date: string;
+  notes: string;
+}
+
 export function initDb(): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS cameras (
@@ -75,16 +84,27 @@ export function initDb(): void {
       notes TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS lens_accessories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      camera_id INTEGER NOT NULL,
+      accessory_name TEXT NOT NULL,
+      focal_length_description TEXT NOT NULL DEFAULT '',
+      purchase_date TEXT NOT NULL,
+      notes TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+    );
   `);
 
   const camCount = db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number };
   const mtCount = db.prepare("SELECT COUNT(*) as c FROM maintenance_types").get() as { c: number };
-  if (camCount.c === 0 || mtCount.c === 0) {
-    seedData(camCount.c === 0, mtCount.c === 0);
+  const laCount = db.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
+  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0) {
+    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0);
   }
 }
 
-function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean): void {
+function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean): void {
   const insertCamera = db.prepare(`
     INSERT INTO cameras (model, purchase_date, estimated_shutter_count, notes)
     VALUES (?, ?, ?, ?)
@@ -105,20 +125,36 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean): void {
     VALUES (?, ?, ?)
   `);
 
+  const insertLensAccessory = db.prepare(`
+    INSERT INTO lens_accessories (camera_id, accessory_name, focal_length_description, purchase_date, notes)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
   const seed = db.transaction(() => {
+    let cam1Id: number | bigint = 0;
+    let cam2Id: number | bigint = 0;
+
     if (seedCameras) {
       const cam1 = insertCamera.run("Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄");
       const cam2 = insertCamera.run("Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机");
+      cam1Id = cam1.lastInsertRowid;
+      cam2Id = cam2.lastInsertRowid;
 
-      insertMaintenance.run(cam1.lastInsertRowid, "2024-01-10", "传感器清洁 + 固件升级");
-      insertMaintenance.run(cam1.lastInsertRowid, "2024-09-05", "快门检测，计数正常");
-      insertMaintenance.run(cam2.lastInsertRowid, "2024-02-18", "更换目镜保护膜");
-      insertMaintenance.run(cam2.lastInsertRowid, "2024-11-12", "卡口与触点清洁保养");
+      insertMaintenance.run(cam1Id, "2024-01-10", "传感器清洁 + 固件升级");
+      insertMaintenance.run(cam1Id, "2024-09-05", "快门检测，计数正常");
+      insertMaintenance.run(cam2Id, "2024-02-18", "更换目镜保护膜");
+      insertMaintenance.run(cam2Id, "2024-11-12", "卡口与触点清洁保养");
 
-      insertShutterCount.run(cam1.lastInsertRowid, "2024-10-01", 1200, "风光外拍");
-      insertShutterCount.run(cam1.lastInsertRowid, "2024-11-15", 800, "棚拍");
-      insertShutterCount.run(cam2.lastInsertRowid, "2024-10-05", 600, "街拍");
-      insertShutterCount.run(cam2.lastInsertRowid, "2024-12-01", 450, "活动拍摄");
+      insertShutterCount.run(cam1Id, "2024-10-01", 1200, "风光外拍");
+      insertShutterCount.run(cam1Id, "2024-11-15", 800, "棚拍");
+      insertShutterCount.run(cam2Id, "2024-10-05", 600, "街拍");
+      insertShutterCount.run(cam2Id, "2024-12-01", 450, "活动拍摄");
+    } else {
+      const cameras = db.prepare("SELECT id FROM cameras ORDER BY id LIMIT 2").all() as { id: number }[];
+      if (cameras.length >= 2) {
+        cam1Id = cameras[0].id;
+        cam2Id = cameras[1].id;
+      }
     }
 
     if (seedMaintenanceTypes) {
@@ -128,6 +164,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean): void {
       insertMaintenanceType.run("固件升级", "维修", "升级相机固件至最新版本，修复已知问题");
       insertMaintenanceType.run("卡口保养", "维修", "清洁与维护镜头卡口触点，确保通信稳定");
       insertMaintenanceType.run("防霉处理", "检测", "检查并处理镜头与机身内部霉变问题");
+    }
+
+    if (seedLensAccessories && cam1Id && cam2Id) {
+      insertLensAccessory.run(cam1Id, "RF 24-70mm F2.8 L IS USM", "24-70mm f/2.8 标准变焦", "2022-04-10", "日常挂机头，风光人像通吃");
+      insertLensAccessory.run(cam2Id, "FE 85mm F1.4 GM", "85mm f/1.4 定焦人像", "2023-09-15", "大光圈人像镜头，虚化效果出色");
     }
   });
 
@@ -294,6 +335,45 @@ export function createMaintenanceType(
   return db
     .prepare("SELECT * FROM maintenance_types WHERE id = ?")
     .get(result.lastInsertRowid) as MaintenanceType;
+}
+
+export function getLensAccessories(cameraId?: number): LensAccessory[] {
+  if (cameraId) {
+    return db
+      .prepare("SELECT * FROM lens_accessories WHERE camera_id = ? ORDER BY id")
+      .all(cameraId) as LensAccessory[];
+  }
+  return db
+    .prepare("SELECT * FROM lens_accessories ORDER BY id")
+    .all() as LensAccessory[];
+}
+
+export function createLensAccessory(
+  data: Omit<LensAccessory, "id">
+): LensAccessory | undefined {
+  if (!getCameraById(data.camera_id)) return undefined;
+
+  const result = db
+    .prepare(
+      `INSERT INTO lens_accessories (camera_id, accessory_name, focal_length_description, purchase_date, notes)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+    .run(
+      data.camera_id,
+      data.accessory_name,
+      data.focal_length_description ?? "",
+      data.purchase_date,
+      data.notes ?? ""
+    );
+
+  return db
+    .prepare("SELECT * FROM lens_accessories WHERE id = ?")
+    .get(result.lastInsertRowid) as LensAccessory;
+}
+
+export function deleteLensAccessory(id: number): boolean {
+  const result = db.prepare("DELETE FROM lens_accessories WHERE id = ?").run(id);
+  return result.changes > 0;
 }
 
 export default db;

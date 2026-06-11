@@ -2,6 +2,8 @@ import axios from "axios";
 import type {
   Camera,
   CameraFormData,
+  LensAccessory,
+  LensAccessoryFormData,
   MaintenanceFormData,
   MaintenanceRecord,
   MaintenanceType,
@@ -84,4 +86,21 @@ export async function createMaintenanceType(
 ): Promise<MaintenanceType> {
   const { data } = await api.post<MaintenanceType>("/maintenance-types", payload);
   return data;
+}
+
+export async function fetchLensAccessories(cameraId?: number): Promise<LensAccessory[]> {
+  const params = cameraId ? { camera_id: cameraId } : {};
+  const { data } = await api.get<LensAccessory[]>("/lens-accessories", { params });
+  return data;
+}
+
+export async function createLensAccessory(
+  payload: LensAccessoryFormData
+): Promise<LensAccessory> {
+  const { data } = await api.post<LensAccessory>("/lens-accessories", payload);
+  return data;
+}
+
+export async function deleteLensAccessory(id: number): Promise<void> {
+  await api.delete(`/lens-accessories/${id}`);
 }

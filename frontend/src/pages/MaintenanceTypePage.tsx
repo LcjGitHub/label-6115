@@ -16,7 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { DataGrid, type GridColDef, zhCN } from "@mui/x-data-grid";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useMemo, useState } from "react";
@@ -122,7 +122,6 @@ export default function MaintenanceTypePage() {
             pageSizeOptions={[5, 10]}
             initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
             sx={{ border: "none" }}
-            localeText={zhCN.components.MuiDataGrid.defaultProps.localeText}
           />
         )}
       </Box>

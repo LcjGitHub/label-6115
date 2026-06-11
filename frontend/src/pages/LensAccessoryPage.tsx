@@ -5,19 +5,26 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputLabel,
   MenuItem,
+  Select,
+  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { zhCN } from "@mui/x-data-grid/locales";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createLensAccessory,
   deleteLensAccessory,
@@ -34,28 +41,46 @@ const emptyForm: LensAccessoryFormData = {
   notes: "",
 };
 
+function getErrorMsg(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data?.error) {
+    return String(err.response.data.error);
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export default function LensAccessoryPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<LensAccessoryFormData>(emptyForm);
+  const [filterCameraId, setFilterCameraId] = useState<number | "all">("all");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { data: accessories = [], isLoading, isError } = useQuery({
-    queryKey: ["lensAccessories"],
-    queryFn: () => fetchLensAccessories(),
-  });
+  useEffect(() => {
+    return () => setErrorMsg(null);
+  }, []);
 
-  const { data: cameras = [] } = useQuery({
+  const { data: cameras = [], isLoading: camerasLoading } = useQuery({
     queryKey: ["cameras"],
     queryFn: fetchCameras,
   });
 
   const cameraMap = useMemo(() => {
-    const map: Record<number, string> = {};
-    cameras.forEach((cam) => {
-      map[cam.id] = cam.model;
-    });
-    return map;
+    const m = new Map<number, string>();
+    for (const c of cameras) m.set(c.id, c.model);
+    return m;
   }, [cameras]);
+
+  const {
+    data: accessories = [],
+    isLoading: accessoriesLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["lensAccessories", filterCameraId],
+    queryFn: () =>
+      fetchLensAccessories(filterCameraId === "all" ? undefined : filterCameraId),
+  });
 
   const createMutation = useMutation({
     mutationFn: createLensAccessory,
@@ -64,20 +89,27 @@ export default function LensAccessoryPage() {
       setOpen(false);
       setForm(emptyForm);
     },
+    onError: (err) => {
+      setErrorMsg("新增失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteLensAccessory,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lensAccessories"] }),
+    onError: (err) => {
+      setErrorMsg("删除失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const columns: GridColDef[] = useMemo(
     () => [
+      { field: "id", headerName: "编号", width: 80, type: "number" },
       {
         field: "camera_id",
         headerName: "所属相机",
         width: 160,
-        valueFormatter: (value: number) => cameraMap[value] ?? "-",
+        valueFormatter: (value: number) => cameraMap.get(value) ?? "-",
       },
       { field: "accessory_name", headerName: "配件名称", flex: 1, minWidth: 200 },
       {
@@ -103,8 +135,7 @@ export default function LensAccessoryPage() {
           <IconButton
             size="small"
             color="error"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               if (window.confirm("确定删除该配件？")) {
                 deleteMutation.mutate(params.row.id);
               }
@@ -123,6 +154,8 @@ export default function LensAccessoryPage() {
     createMutation.mutate(form);
   };
 
+  const isLoading = accessoriesLoading || camerasLoading;
+
   return (
     <Box>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -130,42 +163,81 @@ export default function LensAccessoryPage() {
           <LensIcon />
           配件管理
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
-          新增配件
-        </Button>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel id="lens-filter-label">按相机筛选</InputLabel>
+            <Select
+              labelId="lens-filter-label"
+              label="按相机筛选"
+              value={filterCameraId}
+              onChange={(e) => setFilterCameraId(e.target.value as number | "all")}
+              disabled={camerasLoading}
+            >
+              <MenuItem value="all">全部相机</MenuItem>
+              {cameras.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.model}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
+            新增配件
+          </Button>
+        </Box>
       </Box>
 
-      {isError && <Alert severity="error" sx={{ mb: 2 }}>加载失败，请确认后端已启动</Alert>}
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }} action={
+          <Button color="inherit" size="small" onClick={() => refetch()}>重试</Button>
+        }>
+          加载失败，请确认后端已启动
+        </Alert>
+      )}
 
-      <Box sx={{ height: 420, bgcolor: "background.paper", borderRadius: 1 }}>
-        <DataGrid
-          rows={accessories}
-          columns={columns}
-          loading={isLoading}
-          disableRowSelectionOnClick
-          pageSizeOptions={[5, 10]}
-          initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
-          sx={{ border: "none" }}
-        />
+      <Box sx={{ height: 420, bgcolor: "background.paper", borderRadius: 1, position: "relative" }}>
+        {isLoading ? (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : (
+          <DataGrid
+            rows={accessories}
+            columns={columns}
+            loading={isLoading}
+            disableRowSelectionOnClick
+            pageSizeOptions={[5, 10]}
+            initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+            sx={{ border: "none" }}
+            localeText={zhCN.components.MuiDataGrid.defaultProps.localeText}
+          />
+        )}
       </Box>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>新增配件</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-          <TextField
-            select
-            label="所属相机"
-            required
-            value={form.camera_id}
-            onChange={(e) => setForm({ ...form, camera_id: Number(e.target.value) })}
-          >
-            <MenuItem value={0} disabled>请选择相机</MenuItem>
-            {cameras.map((cam) => (
-              <MenuItem key={cam.id} value={cam.id}>
-                {cam.model}
-              </MenuItem>
-            ))}
-          </TextField>
+          <FormControl fullWidth required>
+            <InputLabel>所属相机</InputLabel>
+            <Select
+              value={form.camera_id || ""}
+              label="所属相机"
+              onChange={(e) => setForm({ ...form, camera_id: Number(e.target.value) })}
+            >
+              {cameras.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.model}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="配件名称"
             required
@@ -204,6 +276,21 @@ export default function LensAccessoryPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!errorMsg}
+        autoHideDuration={4000}
+        onClose={() => setErrorMsg(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErrorMsg(null)}
+          sx={{ width: "100%" }}
+        >
+          {errorMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

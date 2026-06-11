@@ -111,6 +111,14 @@ export interface RepairServiceProvider {
   notes: string;
 }
 
+export interface WarrantyInfo {
+  id: number;
+  camera_id: number;
+  warranty_expiry_date: string;
+  warranty_provider: string;
+  notes: string;
+}
+
 export function initDb(): void {
   const database = getDb();
   database.exec(`
@@ -176,6 +184,15 @@ export function initDb(): void {
       address TEXT NOT NULL DEFAULT '',
       notes TEXT NOT NULL DEFAULT ''
     );
+
+    CREATE TABLE IF NOT EXISTS warranty_info (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      camera_id INTEGER NOT NULL,
+      warranty_expiry_date TEXT NOT NULL,
+      warranty_provider TEXT NOT NULL,
+      notes TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+    );
   `);
 
   const camColumns = database
@@ -230,12 +247,13 @@ export function initDb(): void {
   const laCount = database.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
   const ulCount = database.prepare("SELECT COUNT(*) as c FROM usage_logs").get() as { c: number };
   const rspCount = database.prepare("SELECT COUNT(*) as c FROM repair_service_providers").get() as { c: number };
-  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0 || rspCount.c === 0) {
-    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0, rspCount.c === 0);
+  const wiCount = database.prepare("SELECT COUNT(*) as c FROM warranty_info").get() as { c: number };
+  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0 || rspCount.c === 0 || wiCount.c === 0) {
+    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0, rspCount.c === 0, wiCount.c === 0);
   }
 }
 
-function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean, seedRepairServiceProviders: boolean): void {
+function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean, seedRepairServiceProviders: boolean, seedWarrantyInfo: boolean): void {
   const database = getDb();
   const insertCamera = database.prepare(`
     INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life)
@@ -269,6 +287,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
 
   const insertRepairServiceProvider = database.prepare(`
     INSERT INTO repair_service_providers (provider_name, phone, address, notes)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const insertWarrantyInfo = database.prepare(`
+    INSERT INTO warranty_info (camera_id, warranty_expiry_date, warranty_provider, notes)
     VALUES (?, ?, ?, ?)
   `);
 
@@ -323,6 +346,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
     if (seedRepairServiceProviders) {
       insertRepairServiceProvider.run("星辰专业相机维修中心", "400-888-1234", "北京市朝阳区建国路88号", "专注佳能、索尼高端相机维修，官方授权服务商");
       insertRepairServiceProvider.run("光影影像设备维保", "021-6666-7788", "上海市徐汇区漕溪北路100号", "提供镜头清洁、传感器除尘、快门更换等全系列服务");
+    }
+
+    if (seedWarrantyInfo && cam1Id && cam2Id) {
+      insertWarrantyInfo.run(cam1Id, "2025-03-14", "佳能官方保修", "整机两年质保，含免费清洁服务一次");
+      insertWarrantyInfo.run(cam2Id, "2026-08-19", "索尼官方保修", "整机三年质保，含延保服务");
     }
   });
 
@@ -625,6 +653,44 @@ export function createRepairServiceProvider(
 
 export function deleteRepairServiceProvider(id: number): boolean {
   const result = getDb().prepare("DELETE FROM repair_service_providers WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function getWarrantyInfo(cameraId?: number): WarrantyInfo[] {
+  if (cameraId) {
+    return db
+      .prepare("SELECT * FROM warranty_info WHERE camera_id = ? ORDER BY warranty_expiry_date DESC")
+      .all(cameraId) as WarrantyInfo[];
+  }
+  return db
+    .prepare("SELECT * FROM warranty_info ORDER BY id")
+    .all() as WarrantyInfo[];
+}
+
+export function createWarrantyInfo(
+  data: Omit<WarrantyInfo, "id">
+): WarrantyInfo | undefined {
+  if (!getCameraById(data.camera_id)) return undefined;
+
+  const result = db
+    .prepare(
+      `INSERT INTO warranty_info (camera_id, warranty_expiry_date, warranty_provider, notes)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(
+      data.camera_id,
+      data.warranty_expiry_date,
+      data.warranty_provider,
+      data.notes ?? ""
+    );
+
+  return db
+    .prepare("SELECT * FROM warranty_info WHERE id = ?")
+    .get(result.lastInsertRowid) as WarrantyInfo;
+}
+
+export function deleteWarrantyInfo(id: number): boolean {
+  const result = getDb().prepare("DELETE FROM warranty_info WHERE id = ?").run(id);
   return result.changes > 0;
 }
 

@@ -15,6 +15,8 @@ import type {
   StatisticsOverview,
   UsageLog,
   UsageLogFormData,
+  WarrantyInfo,
+  WarrantyInfoFormData,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
@@ -153,4 +155,21 @@ export async function createRepairServiceProvider(
 
 export async function deleteRepairServiceProvider(id: number): Promise<void> {
   await api.delete(`/repair-service-providers/${id}`);
+}
+
+export async function fetchWarrantyInfo(cameraId?: number): Promise<WarrantyInfo[]> {
+  const params = cameraId ? { camera_id: cameraId } : {};
+  const { data } = await api.get<WarrantyInfo[]>("/warranty-info", { params });
+  return data;
+}
+
+export async function createWarrantyInfo(
+  payload: WarrantyInfoFormData
+): Promise<WarrantyInfo> {
+  const { data } = await api.post<WarrantyInfo>("/warranty-info", payload);
+  return data;
+}
+
+export async function deleteWarrantyInfo(id: number): Promise<void> {
+  await api.delete(`/warranty-info/${id}`);
 }

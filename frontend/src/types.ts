@@ -123,3 +123,18 @@ export interface RepairServiceProviderFormData {
   address: string;
   notes: string;
 }
+
+export interface WarrantyInfo {
+  id: number;
+  camera_id: number;
+  warranty_expiry_date: string;
+  warranty_provider: string;
+  notes: string;
+}
+
+export interface WarrantyInfoFormData {
+  camera_id: number;
+  warranty_expiry_date: string;
+  warranty_provider: string;
+  notes: string;
+}

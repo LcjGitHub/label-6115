@@ -9,6 +9,7 @@ import repairServiceProvidersRouter from "./routes/repairServiceProviders";
 import shutterCountsRouter from "./routes/shutterCounts";
 import statisticsRouter from "./routes/statistics";
 import usageLogsRouter from "./routes/usageLogs";
+import warrantyInfoRouter from "./routes/warrantyInfo";
 
 export function createApp(): express.Express {
   initDb();
@@ -25,6 +26,7 @@ export function createApp(): express.Express {
   app.use("/api/shutter-counts", shutterCountsRouter);
   app.use("/api/statistics", statisticsRouter);
   app.use("/api/usage-logs", usageLogsRouter);
+  app.use("/api/warranty-info", warrantyInfoRouter);
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

@@ -216,6 +216,11 @@ export default function CameraDetailPage() {
           <Typography variant="h5" fontWeight={600} gutterBottom>
             相机详情
           </Typography>
+          {camera.shutter_warning && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              ⚠ 快门预警：当前预估快门数已达到额定寿命的 80% 以上，建议尽快安排快门检测与保养
+            </Alert>
+          )}
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
             <TextField
               label="品牌"
@@ -251,9 +256,10 @@ export default function CameraDetailPage() {
             <TextField
               label="额定快门寿命"
               type="number"
+              inputProps={{ min: 1 }}
               value={form.rated_shutter_life}
               onChange={(e) => {
-                setCameraForm({ ...form, rated_shutter_life: Number(e.target.value) });
+                setCameraForm({ ...form, rated_shutter_life: Math.max(1, Number(e.target.value) || 1) });
               }}
             />
             <FormControl>

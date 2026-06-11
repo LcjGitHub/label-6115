@@ -47,6 +47,11 @@ router.post("/", (req, res) => {
     res.status(400).json({ error: "无效的状态值，可选值为：使用中、维修中、闲置" });
     return;
   }
+  const ratedValue = Number(rated_shutter_life);
+  if (rated_shutter_life !== undefined && (!Number.isInteger(ratedValue) || ratedValue <= 0)) {
+    res.status(400).json({ error: "额定快门寿命必须为正整数" });
+    return;
+  }
   const camera = createCamera({
     brand,
     model,
@@ -54,7 +59,7 @@ router.post("/", (req, res) => {
     estimated_shutter_count: Number(estimated_shutter_count) || 0,
     notes: notes ?? "",
     status: (status as CameraStatus) ?? "使用中",
-    rated_shutter_life: Number(rated_shutter_life) || 200000,
+    rated_shutter_life: ratedValue || 200000,
   });
   res.status(201).json(camera);
 });
@@ -70,6 +75,11 @@ router.put("/:id", (req, res) => {
     res.status(400).json({ error: "无效的状态值，可选值为：使用中、维修中、闲置" });
     return;
   }
+  const ratedValue = Number(rated_shutter_life);
+  if (rated_shutter_life !== undefined && (!Number.isInteger(ratedValue) || ratedValue <= 0)) {
+    res.status(400).json({ error: "额定快门寿命必须为正整数" });
+    return;
+  }
   const camera = updateCamera(id, {
     brand,
     model,
@@ -77,7 +87,7 @@ router.put("/:id", (req, res) => {
     estimated_shutter_count: Number(estimated_shutter_count) || 0,
     notes: notes ?? "",
     status: (status as CameraStatus) ?? "使用中",
-    rated_shutter_life: Number(rated_shutter_life) || 200000,
+    rated_shutter_life: ratedValue || 200000,
   });
   if (!camera) {
     res.status(404).json({ error: "相机不存在" });

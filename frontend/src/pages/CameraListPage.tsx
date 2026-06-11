@@ -316,9 +316,10 @@ export default function CameraListPage() {
           <TextField
             label="额定快门寿命"
             type="number"
+            inputProps={{ min: 1 }}
             value={form.rated_shutter_life}
             onChange={(e) =>
-              setForm({ ...form, rated_shutter_life: Number(e.target.value) })
+              setForm({ ...form, rated_shutter_life: Math.max(1, Number(e.target.value) || 1) })
             }
           />
           <FormControl>

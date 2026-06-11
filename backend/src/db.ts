@@ -148,6 +148,9 @@ export function initDb(): void {
     db.exec(`
       ALTER TABLE cameras ADD COLUMN rated_shutter_life INTEGER NOT NULL DEFAULT 200000;
     `);
+    const backfillRated = db.prepare("UPDATE cameras SET rated_shutter_life = ? WHERE model = ?");
+    backfillRated.run(300000, "Canon EOS R5");
+    backfillRated.run(200000, "Sony A7 IV");
   }
 
   const mrColumns = db
@@ -214,7 +217,7 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
 
     if (seedCameras) {
       const cam1 = insertCamera.run("佳能", "Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "维修中", 300000);
-      const cam2 = insertCamera.run("新索尼", "Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机", "闲置", 200000);
+      const cam2 = insertCamera.run("新索尼", "Sony A7 IV", "2023-08-20", 170000, "视频与街拍备用机", "闲置", 200000);
       cam1Id = cam1.lastInsertRowid;
       cam2Id = cam2.lastInsertRowid;
 

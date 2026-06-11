@@ -3,6 +3,7 @@ import express from "express";
 import { initDb } from "./db";
 import camerasRouter from "./routes/cameras";
 import maintenanceRouter from "./routes/maintenance";
+import shutterCountsRouter from "./routes/shutterCounts";
 
 const PORT = 6000;
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use("/api/cameras", camerasRouter);
 app.use("/api", maintenanceRouter);
+app.use("/api/shutter-counts", shutterCountsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

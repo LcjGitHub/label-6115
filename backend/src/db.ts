@@ -27,6 +27,14 @@ export interface MaintenanceRecord {
   content: string;
 }
 
+export interface ShutterCountRecord {
+  id: number;
+  camera_id: number;
+  record_date: string;
+  shutter_increment: number;
+  notes: string;
+}
+
 export function initDb(): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS cameras (
@@ -42,6 +50,15 @@ export function initDb(): void {
       camera_id INTEGER NOT NULL,
       maintenance_date TEXT NOT NULL,
       content TEXT NOT NULL,
+      FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS shutter_counts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      camera_id INTEGER NOT NULL,
+      record_date TEXT NOT NULL,
+      shutter_increment INTEGER NOT NULL,
+      notes TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
     );
   `);
@@ -63,6 +80,11 @@ function seedData(): void {
     VALUES (?, ?, ?)
   `);
 
+  const insertShutterCount = db.prepare(`
+    INSERT INTO shutter_counts (camera_id, record_date, shutter_increment, notes)
+    VALUES (?, ?, ?, ?)
+  `);
+
   const seed = db.transaction(() => {
     const cam1 = insertCamera.run("Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄");
     const cam2 = insertCamera.run("Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机");
@@ -71,6 +93,11 @@ function seedData(): void {
     insertMaintenance.run(cam1.lastInsertRowid, "2024-09-05", "快门检测，计数正常");
     insertMaintenance.run(cam2.lastInsertRowid, "2024-02-18", "更换目镜保护膜");
     insertMaintenance.run(cam2.lastInsertRowid, "2024-11-12", "卡口与触点清洁保养");
+
+    insertShutterCount.run(cam1.lastInsertRowid, "2024-10-01", 1200, "风光外拍");
+    insertShutterCount.run(cam1.lastInsertRowid, "2024-11-15", 800, "棚拍");
+    insertShutterCount.run(cam2.lastInsertRowid, "2024-10-05", 600, "街拍");
+    insertShutterCount.run(cam2.lastInsertRowid, "2024-12-01", 450, "活动拍摄");
   });
 
   seed();
@@ -137,6 +164,39 @@ export function createMaintenance(
 
 export function deleteMaintenance(id: number): boolean {
   const result = db.prepare("DELETE FROM maintenance_records WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function getShutterCounts(cameraId?: number): ShutterCountRecord[] {
+  if (cameraId) {
+    return db
+      .prepare("SELECT * FROM shutter_counts WHERE camera_id = ? ORDER BY record_date DESC")
+      .all(cameraId) as ShutterCountRecord[];
+  }
+  return db
+    .prepare("SELECT * FROM shutter_counts ORDER BY record_date DESC")
+    .all() as ShutterCountRecord[];
+}
+
+export function createShutterCount(
+  data: { camera_id: number; record_date: string; shutter_increment: number; notes?: string }
+): ShutterCountRecord | undefined {
+  if (!getCameraById(data.camera_id)) return undefined;
+
+  const result = db
+    .prepare(
+      `INSERT INTO shutter_counts (camera_id, record_date, shutter_increment, notes)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(data.camera_id, data.record_date, data.shutter_increment, data.notes ?? "");
+
+  return db
+    .prepare("SELECT * FROM shutter_counts WHERE id = ?")
+    .get(result.lastInsertRowid) as ShutterCountRecord;
+}
+
+export function deleteShutterCount(id: number): boolean {
+  const result = db.prepare("DELETE FROM shutter_counts WHERE id = ?").run(id);
   return result.changes > 0;
 }
 

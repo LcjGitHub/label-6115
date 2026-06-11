@@ -24,3 +24,18 @@ export interface MaintenanceFormData {
   maintenance_date: string;
   content: string;
 }
+
+export interface ShutterCountRecord {
+  id: number;
+  camera_id: number;
+  record_date: string;
+  shutter_increment: number;
+  notes: string;
+}
+
+export interface ShutterCountFormData {
+  camera_id: number;
+  record_date: string;
+  shutter_increment: number;
+  notes: string;
+}

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Camera, CameraFormData, MaintenanceFormData, MaintenanceRecord } from "../types";
+import type { Camera, CameraFormData, MaintenanceFormData, MaintenanceRecord, ShutterCountFormData, ShutterCountRecord } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
 
@@ -42,4 +42,19 @@ export async function createMaintenance(
 
 export async function deleteMaintenance(id: number): Promise<void> {
   await api.delete(`/maintenance/${id}`);
+}
+
+export async function fetchShutterCounts(cameraId?: number): Promise<ShutterCountRecord[]> {
+  const params = cameraId ? { camera_id: cameraId } : {};
+  const { data } = await api.get<ShutterCountRecord[]>("/shutter-counts", { params });
+  return data;
+}
+
+export async function createShutterCount(payload: ShutterCountFormData): Promise<ShutterCountRecord> {
+  const { data } = await api.post<ShutterCountRecord>("/shutter-counts", payload);
+  return data;
+}
+
+export async function deleteShutterCount(id: number): Promise<void> {
+  await api.delete(`/shutter-counts/${id}`);
 }

@@ -19,12 +19,14 @@ import {
   ListItemText,
   MenuItem,
   Select,
+  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   createMaintenance,
@@ -41,6 +43,14 @@ const filterOptions = createFilterOptions<string>({
   trim: true,
 });
 
+function getErrorMsg(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data?.error) {
+    return String(err.response.data.error);
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export default function CameraDetailPage() {
   const { id } = useParams<{ id: string }>();
   const cameraId = Number(id);
@@ -51,6 +61,11 @@ export default function CameraDetailPage() {
     maintenance_date: dayjs().format("YYYY-MM-DD"),
     content: "",
   });
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => setErrorMsg(null);
+  }, []);
 
   const {
     data: camera,
@@ -75,7 +90,13 @@ export default function CameraDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: CameraFormData) => updateCamera(cameraId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["camera", cameraId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["camera", cameraId] });
+      queryClient.invalidateQueries({ queryKey: ["cameras"] });
+    },
+    onError: (err) => {
+      setErrorMsg("保存失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const createMaintenanceMutation = useMutation({
@@ -84,11 +105,17 @@ export default function CameraDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["maintenance", cameraId] });
       setMaintenanceForm({ maintenance_date: dayjs().format("YYYY-MM-DD"), content: "" });
     },
+    onError: (err) => {
+      setErrorMsg("添加保养失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const deleteMaintenanceMutation = useMutation({
     mutationFn: deleteMaintenance,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maintenance", cameraId] }),
+    onError: (err) => {
+      setErrorMsg("删除保养失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const form = cameraForm ?? (camera
@@ -97,7 +124,7 @@ export default function CameraDetailPage() {
         purchase_date: camera.purchase_date,
         estimated_shutter_count: camera.estimated_shutter_count,
         notes: camera.notes,
-        status: camera.status,
+        status: (camera.status as CameraStatus) ?? "使用中",
       }
     : null);
 
@@ -275,6 +302,21 @@ export default function CameraDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Snackbar
+        open={!!errorMsg}
+        autoHideDuration={4000}
+        onClose={() => setErrorMsg(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErrorMsg(null)}
+          sx={{ width: "100%" }}
+        >
+          {errorMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

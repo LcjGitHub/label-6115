@@ -117,6 +117,16 @@ export function initDb(): void {
     );
   `);
 
+  const columns = db
+    .prepare("PRAGMA table_info(cameras)")
+    .all() as { name: string }[];
+  const hasStatusColumn = columns.some((col) => col.name === "status");
+  if (!hasStatusColumn) {
+    db.exec(`
+      ALTER TABLE cameras ADD COLUMN status TEXT NOT NULL DEFAULT '使用中';
+    `);
+  }
+
   const camCount = db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number };
   const mtCount = db.prepare("SELECT COUNT(*) as c FROM maintenance_types").get() as { c: number };
   const laCount = db.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
@@ -162,7 +172,7 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
     let cam2Id: number | bigint = 0;
 
     if (seedCameras) {
-      const cam1 = insertCamera.run("Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "使用中");
+      const cam1 = insertCamera.run("Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "维修中");
       const cam2 = insertCamera.run("Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机", "闲置");
       cam1Id = cam1.lastInsertRowid;
       cam2Id = cam2.lastInsertRowid;

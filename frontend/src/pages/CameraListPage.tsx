@@ -15,14 +15,16 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Snackbar,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createCamera, deleteCamera, fetchCameras } from "../api/client";
 import { CAMERA_STATUSES, type CameraFormData, type CameraStatus } from "../types";
@@ -41,14 +43,32 @@ const statusColorMap: Record<CameraStatus, "success" | "warning" | "default"> = 
   闲置: "default",
 };
 
+function getErrorMsg(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data?.error) {
+    return String(err.response.data.error);
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export default function CameraListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CameraFormData>(emptyForm);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { data: cameras = [], isLoading, isError } = useQuery({
+  useEffect(() => {
+    return () => setErrorMsg(null);
+  }, []);
+
+  const {
+    data: cameras = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["cameras", statusFilter],
     queryFn: () => fetchCameras(statusFilter || undefined),
   });
@@ -60,11 +80,17 @@ export default function CameraListPage() {
       setOpen(false);
       setForm(emptyForm);
     },
+    onError: (err) => {
+      setErrorMsg("新增失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteCamera,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cameras"] }),
+    onError: (err) => {
+      setErrorMsg("删除失败：" + getErrorMsg(err, "请稍后重试"));
+    },
   });
 
   const columns: GridColDef[] = useMemo(
@@ -169,7 +195,13 @@ export default function CameraListPage() {
         </Box>
       </Box>
 
-      {isError && <Alert severity="error" sx={{ mb: 2 }}>加载失败，请确认后端已启动</Alert>}
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }} action={
+          <Button color="inherit" size="small" onClick={() => refetch()}>重试</Button>
+        }>
+          加载失败，请稍后重试
+        </Alert>
+      )}
 
       <Box sx={{ height: 420, bgcolor: "background.paper", borderRadius: 1 }}>
         <DataGrid
@@ -246,6 +278,21 @@ export default function CameraListPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!errorMsg}
+        autoHideDuration={4000}
+        onClose={() => setErrorMsg(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErrorMsg(null)}
+          sx={{ width: "100%" }}
+        >
+          {errorMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

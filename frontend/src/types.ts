@@ -138,3 +138,18 @@ export interface WarrantyInfoFormData {
   warranty_provider: string;
   notes: string;
 }
+
+export interface MaintenancePlan {
+  id: number;
+  camera_id: number;
+  plan_name: string;
+  next_maintenance_date: string;
+  reminder_notes: string;
+}
+
+export interface MaintenancePlanFormData {
+  camera_id: number;
+  plan_name: string;
+  next_maintenance_date: string;
+  reminder_notes: string;
+}

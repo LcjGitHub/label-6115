@@ -5,6 +5,8 @@ import type {
   LensAccessory,
   LensAccessoryFormData,
   MaintenanceFormData,
+  MaintenancePlan,
+  MaintenancePlanFormData,
   MaintenanceRecord,
   MaintenanceType,
   MaintenanceTypeFormData,
@@ -172,4 +174,21 @@ export async function createWarrantyInfo(
 
 export async function deleteWarrantyInfo(id: number): Promise<void> {
   await api.delete(`/warranty-info/${id}`);
+}
+
+export async function fetchMaintenancePlans(cameraId?: number): Promise<MaintenancePlan[]> {
+  const params = cameraId ? { camera_id: cameraId } : {};
+  const { data } = await api.get<MaintenancePlan[]>("/maintenance-plans", { params });
+  return data;
+}
+
+export async function createMaintenancePlan(
+  payload: MaintenancePlanFormData
+): Promise<MaintenancePlan> {
+  const { data } = await api.post<MaintenancePlan>("/maintenance-plans", payload);
+  return data;
+}
+
+export async function deleteMaintenancePlan(id: number): Promise<void> {
+  await api.delete(`/maintenance-plans/${id}`);
 }

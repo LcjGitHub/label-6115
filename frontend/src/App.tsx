@@ -2,6 +2,7 @@ import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import BuildCircleIcon from "@mui/icons-material/BuildCircle";
 import BuildIcon from "@mui/icons-material/Build";
+import EventRepeatIcon from "@mui/icons-material/EventRepeat";
 import LensIcon from "@mui/icons-material/Lens";
 import ShutterSpeedIcon from "@mui/icons-material/ShutterSpeed";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
@@ -11,6 +12,7 @@ import CameraDetailPage from "./pages/CameraDetailPage";
 import CameraListPage from "./pages/CameraListPage";
 import CameraUsageLogPage from "./pages/CameraUsageLogPage";
 import LensAccessoryPage from "./pages/LensAccessoryPage";
+import MaintenancePlanPage from "./pages/MaintenancePlanPage";
 import MaintenanceTypePage from "./pages/MaintenanceTypePage";
 import OverviewPage from "./pages/OverviewPage";
 import RepairServiceProviderPage from "./pages/RepairServiceProviderPage";
@@ -20,6 +22,7 @@ import WarrantyPage from "./pages/WarrantyPage";
 const navItems = [
   { label: "配件管理", to: "/lens-accessories", icon: <LensIcon fontSize="small" /> },
   { label: "快门记录", to: "/shutter-counts", icon: <ShutterSpeedIcon fontSize="small" /> },
+  { label: "保养计划", to: "/maintenance-plans", icon: <EventRepeatIcon fontSize="small" /> },
   { label: "保养类型", to: "/maintenance-types", icon: <BuildIcon fontSize="small" /> },
   { label: "保修管理", to: "/warranty", icon: <VerifiedUserIcon fontSize="small" /> },
   { label: "维修服务商", to: "/repair-service-providers", icon: <BuildCircleIcon fontSize="small" /> },
@@ -95,6 +98,7 @@ export default function App() {
           <Route path="/cameras/:id/usage-logs" element={<CameraUsageLogPage />} />
           <Route path="/lens-accessories" element={<LensAccessoryPage />} />
           <Route path="/shutter-counts" element={<ShutterCountPage />} />
+          <Route path="/maintenance-plans" element={<MaintenancePlanPage />} />
           <Route path="/maintenance-types" element={<MaintenanceTypePage />} />
           <Route path="/warranty" element={<WarrantyPage />} />
           <Route path="/repair-service-providers" element={<RepairServiceProviderPage />} />

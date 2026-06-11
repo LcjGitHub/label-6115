@@ -119,6 +119,14 @@ export interface WarrantyInfo {
   notes: string;
 }
 
+export interface MaintenancePlan {
+  id: number;
+  camera_id: number;
+  plan_name: string;
+  next_maintenance_date: string;
+  reminder_notes: string;
+}
+
 export function initDb(): void {
   const database = getDb();
   database.exec(`
@@ -193,6 +201,15 @@ export function initDb(): void {
       notes TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS maintenance_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      camera_id INTEGER NOT NULL,
+      plan_name TEXT NOT NULL,
+      next_maintenance_date TEXT NOT NULL,
+      reminder_notes TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+    );
   `);
 
   const camColumns = database
@@ -248,12 +265,13 @@ export function initDb(): void {
   const ulCount = database.prepare("SELECT COUNT(*) as c FROM usage_logs").get() as { c: number };
   const rspCount = database.prepare("SELECT COUNT(*) as c FROM repair_service_providers").get() as { c: number };
   const wiCount = database.prepare("SELECT COUNT(*) as c FROM warranty_info").get() as { c: number };
-  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0 || rspCount.c === 0 || wiCount.c === 0) {
-    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0, rspCount.c === 0, wiCount.c === 0);
+  const mpCount = database.prepare("SELECT COUNT(*) as c FROM maintenance_plans").get() as { c: number };
+  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0 || rspCount.c === 0 || wiCount.c === 0 || mpCount.c === 0) {
+    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0, rspCount.c === 0, wiCount.c === 0, mpCount.c === 0);
   }
 }
 
-function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean, seedRepairServiceProviders: boolean, seedWarrantyInfo: boolean): void {
+function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean, seedRepairServiceProviders: boolean, seedWarrantyInfo: boolean, seedMaintenancePlans: boolean): void {
   const database = getDb();
   const insertCamera = database.prepare(`
     INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life)
@@ -292,6 +310,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
 
   const insertWarrantyInfo = database.prepare(`
     INSERT INTO warranty_info (camera_id, warranty_expiry_date, warranty_provider, notes)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const insertMaintenancePlan = database.prepare(`
+    INSERT INTO maintenance_plans (camera_id, plan_name, next_maintenance_date, reminder_notes)
     VALUES (?, ?, ?, ?)
   `);
 
@@ -351,6 +374,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
     if (seedWarrantyInfo && cam1Id && cam2Id) {
       insertWarrantyInfo.run(cam1Id, "2025-03-14", "佳能官方保修", "整机两年质保，含免费清洁服务一次");
       insertWarrantyInfo.run(cam2Id, "2026-08-19", "索尼官方保修", "整机三年质保，含延保服务");
+    }
+
+    if (seedMaintenancePlans && cam1Id && cam2Id) {
+      insertMaintenancePlan.run(cam1Id, "季度传感器清洁", "2026-03-15", "建议每季度清洁一次传感器，风光拍摄灰尘较多");
+      insertMaintenancePlan.run(cam2Id, "半年全面保养", "2025-12-20", "半年一次全面检查，包括卡口清洁、固件升级检查");
     }
   });
 
@@ -691,6 +719,44 @@ export function createWarrantyInfo(
 
 export function deleteWarrantyInfo(id: number): boolean {
   const result = getDb().prepare("DELETE FROM warranty_info WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function getMaintenancePlans(cameraId?: number): MaintenancePlan[] {
+  if (cameraId) {
+    return db
+      .prepare("SELECT * FROM maintenance_plans WHERE camera_id = ? ORDER BY next_maintenance_date ASC")
+      .all(cameraId) as MaintenancePlan[];
+  }
+  return db
+    .prepare("SELECT * FROM maintenance_plans ORDER BY next_maintenance_date ASC")
+    .all() as MaintenancePlan[];
+}
+
+export function createMaintenancePlan(
+  data: Omit<MaintenancePlan, "id">
+): MaintenancePlan | undefined {
+  if (!getCameraById(data.camera_id)) return undefined;
+
+  const result = db
+    .prepare(
+      `INSERT INTO maintenance_plans (camera_id, plan_name, next_maintenance_date, reminder_notes)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(
+      data.camera_id,
+      data.plan_name,
+      data.next_maintenance_date,
+      data.reminder_notes ?? ""
+    );
+
+  return db
+    .prepare("SELECT * FROM maintenance_plans WHERE id = ?")
+    .get(result.lastInsertRowid) as MaintenancePlan;
+}
+
+export function deleteMaintenancePlan(id: number): boolean {
+  const result = getDb().prepare("DELETE FROM maintenance_plans WHERE id = ?").run(id);
   return result.changes > 0;
 }
 

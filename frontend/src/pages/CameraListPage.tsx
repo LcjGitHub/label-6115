@@ -81,11 +81,16 @@ export default function CameraListPage() {
       }),
   });
 
+  const { data: allCameras = [] } = useQuery({
+    queryKey: ["cameras"],
+    queryFn: () => fetchCameras(),
+  });
+
   const uniqueBrands = useMemo(() => {
     const brands = new Set<string>();
-    cameras.forEach((c) => c.brand && brands.add(c.brand));
+    allCameras.forEach((c) => c.brand && brands.add(c.brand));
     return Array.from(brands).sort();
-  }, [cameras]);
+  }, [allCameras]);
 
   const createMutation = useMutation({
     mutationFn: createCamera,

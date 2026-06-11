@@ -129,6 +129,9 @@ export function initDb(): void {
     db.exec(`
       ALTER TABLE cameras ADD COLUMN brand TEXT NOT NULL DEFAULT '';
     `);
+    const backfillBrand = db.prepare("UPDATE cameras SET brand = ? WHERE model = ?");
+    backfillBrand.run("佳能", "Canon EOS R5");
+    backfillBrand.run("新索尼", "Sony A7 IV");
   }
   const hasStatusColumn = camColumns.some((col) => col.name === "status");
   if (!hasStatusColumn) {

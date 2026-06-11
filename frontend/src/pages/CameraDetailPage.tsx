@@ -9,6 +9,7 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  createFilterOptions,
   Divider,
   IconButton,
   List,
@@ -30,6 +31,11 @@ import {
   updateCamera,
 } from "../api/client";
 import type { CameraFormData, MaintenanceFormData } from "../types";
+
+const filterOptions = createFilterOptions<string>({
+  stringify: (option) => option,
+  trim: true,
+});
 
 export default function CameraDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -189,6 +195,7 @@ export default function CameraDetailPage() {
               size="small"
               sx={{ flex: 1, minWidth: 200 }}
               options={maintenanceTypes.map((t) => t.type_name)}
+              filterOptions={filterOptions}
               value={maintenanceForm.content}
               onInputChange={(_e, value) =>
                 setMaintenanceForm({ ...maintenanceForm, content: value })

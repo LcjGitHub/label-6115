@@ -25,6 +25,19 @@ export interface MaintenanceFormData {
   content: string;
 }
 
+export interface MaintenanceType {
+  id: number;
+  type_name: string;
+  category: string;
+  description: string;
+}
+
+export interface MaintenanceTypeFormData {
+  type_name: string;
+  category: string;
+  description: string;
+}
+
 export interface ShutterCountRecord {
   id: number;
   camera_id: number;

@@ -3,6 +3,7 @@ import express from "express";
 import { initDb } from "./db";
 import camerasRouter from "./routes/cameras";
 import maintenanceRouter from "./routes/maintenance";
+import maintenanceTypesRouter from "./routes/maintenanceTypes";
 import shutterCountsRouter from "./routes/shutterCounts";
 import statisticsRouter from "./routes/statistics";
 
@@ -16,6 +17,7 @@ app.use(express.json());
 
 app.use("/api/cameras", camerasRouter);
 app.use("/api", maintenanceRouter);
+app.use("/api/maintenance-types", maintenanceTypesRouter);
 app.use("/api/shutter-counts", shutterCountsRouter);
 app.use("/api/statistics", statisticsRouter);
 

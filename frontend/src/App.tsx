@@ -1,15 +1,18 @@
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import BuildIcon from "@mui/icons-material/Build";
 import ShutterSpeedIcon from "@mui/icons-material/ShutterSpeed";
 import { AppBar, Box, Container, Toolbar, Typography } from "@mui/material";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import CameraDetailPage from "./pages/CameraDetailPage";
 import CameraListPage from "./pages/CameraListPage";
+import MaintenanceTypePage from "./pages/MaintenanceTypePage";
 import OverviewPage from "./pages/OverviewPage";
 import ShutterCountPage from "./pages/ShutterCountPage";
 
 const navItems = [
   { label: "快门记录", to: "/shutter-counts", icon: <ShutterSpeedIcon fontSize="small" /> },
+  { label: "保养类型", to: "/maintenance-types", icon: <BuildIcon fontSize="small" /> },
   { label: "数据概览", to: "/overview", icon: <BarChartIcon fontSize="small" /> },
 ];
 
@@ -80,6 +83,7 @@ export default function App() {
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/cameras/:id" element={<CameraDetailPage />} />
           <Route path="/shutter-counts" element={<ShutterCountPage />} />
+          <Route path="/maintenance-types" element={<MaintenanceTypePage />} />
         </Routes>
       </Container>
     </Box>

@@ -3,6 +3,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -25,6 +26,7 @@ import {
   deleteMaintenance,
   fetchCamera,
   fetchMaintenance,
+  fetchMaintenanceTypes,
   updateCamera,
 } from "../api/client";
 import type { CameraFormData, MaintenanceFormData } from "../types";
@@ -54,6 +56,11 @@ export default function CameraDetailPage() {
     queryKey: ["maintenance", cameraId],
     queryFn: () => fetchMaintenance(cameraId),
     enabled: !isNaN(cameraId) && !!camera,
+  });
+
+  const { data: maintenanceTypes = [] } = useQuery({
+    queryKey: ["maintenance-types"],
+    queryFn: fetchMaintenanceTypes,
   });
 
   const updateMutation = useMutation({
@@ -177,14 +184,18 @@ export default function CameraDetailPage() {
                 setMaintenanceForm({ ...maintenanceForm, maintenance_date: e.target.value })
               }
             />
-            <TextField
-              label="保养内容"
+            <Autocomplete
+              freeSolo
               size="small"
               sx={{ flex: 1, minWidth: 200 }}
+              options={maintenanceTypes.map((t) => t.type_name)}
               value={maintenanceForm.content}
-              onChange={(e) =>
-                setMaintenanceForm({ ...maintenanceForm, content: e.target.value })
+              onInputChange={(_e, value) =>
+                setMaintenanceForm({ ...maintenanceForm, content: value })
               }
+              renderInput={(params) => (
+                <TextField {...params} label="保养内容" />
+              )}
             />
             <Button
               variant="outlined"

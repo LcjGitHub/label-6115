@@ -4,6 +4,8 @@ import type {
   CameraFormData,
   MaintenanceFormData,
   MaintenanceRecord,
+  MaintenanceType,
+  MaintenanceTypeFormData,
   ShutterCountFormData,
   ShutterCountRecord,
   StatisticsOverview,
@@ -69,5 +71,17 @@ export async function deleteShutterCount(id: number): Promise<void> {
 
 export async function fetchStatisticsOverview(): Promise<StatisticsOverview> {
   const { data } = await api.get<StatisticsOverview>("/statistics/overview");
+  return data;
+}
+
+export async function fetchMaintenanceTypes(): Promise<MaintenanceType[]> {
+  const { data } = await api.get<MaintenanceType[]>("/maintenance-types");
+  return data;
+}
+
+export async function createMaintenanceType(
+  payload: MaintenanceTypeFormData
+): Promise<MaintenanceType> {
+  const { data } = await api.post<MaintenanceType>("/maintenance-types", payload);
   return data;
 }

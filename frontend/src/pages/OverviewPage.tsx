@@ -13,11 +13,14 @@ import {
   ListItemText,
   Skeleton,
   Typography,
+  alpha,
+  useTheme,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { fetchStatisticsOverview } from "../api/client";
 
 export default function OverviewPage() {
+  const theme = useTheme();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["statistics"],
     queryFn: fetchStatisticsOverview,
@@ -26,25 +29,28 @@ export default function OverviewPage() {
   const statCards = [
     {
       label: "相机总数",
-      value: data?.totalCameras ?? 0,
       icon: <CameraAltIcon sx={{ fontSize: 40 }} />,
-      color: "primary.main",
-      bgColor: "primary.50",
+      color: theme.palette.primary.main,
+      bgColor: alpha(theme.palette.primary.main, 0.1),
     },
     {
       label: "保养记录总数",
-      value: data?.totalMaintenanceRecords ?? 0,
       icon: <BuildIcon sx={{ fontSize: 40 }} />,
-      color: "success.main",
-      bgColor: "success.50",
+      color: theme.palette.success.main,
+      bgColor: alpha(theme.palette.success.main, 0.1),
     },
     {
-      label: "快门数超 5 万",
-      value: data?.highShutterCameras ?? 0,
+      label: "预估快门数超过五万",
       icon: <WarningAmberIcon sx={{ fontSize: 40 }} />,
-      color: "warning.main",
-      bgColor: "warning.50",
+      color: theme.palette.warning.main,
+      bgColor: alpha(theme.palette.warning.main, 0.1),
     },
+  ];
+
+  const statValues = [
+    data?.totalCameras,
+    data?.totalMaintenanceRecords,
+    data?.highShutterCameras,
   ];
 
   return (
@@ -56,7 +62,7 @@ export default function OverviewPage() {
       {isError && <Alert severity="error" sx={{ mb: 3 }}>加载失败，请确认后端已启动</Alert>}
 
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        {statCards.map((card) => (
+        {statCards.map((card, index) => (
           <Grid key={card.label} size={{ xs: 12, sm: 6, md: 4 }}>
             <Card sx={{ height: "100%" }}>
               <CardContent
@@ -85,11 +91,11 @@ export default function OverviewPage() {
                   <Typography variant="body2" color="text.secondary">
                     {card.label}
                   </Typography>
-                  {isLoading ? (
+                  {isLoading || statValues[index] === undefined ? (
                     <Skeleton variant="text" width="60%" height={40} />
                   ) : (
                     <Typography variant="h4" fontWeight={700}>
-                      {card.value}
+                      {statValues[index]}
                     </Typography>
                   )}
                 </Box>
@@ -104,17 +110,17 @@ export default function OverviewPage() {
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
             按型号分组
           </Typography>
-          {isLoading ? (
+          {isLoading || !data ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Skeleton variant="rounded" height={48} />
               <Skeleton variant="rounded" height={48} />
               <Skeleton variant="rounded" height={48} />
             </Box>
-          ) : data?.camerasByModel.length === 0 ? (
+          ) : data.camerasByModel.length === 0 ? (
             <Typography color="text.secondary">暂无数据</Typography>
           ) : (
             <List disablePadding>
-              {data?.camerasByModel.map((item) => (
+              {data.camerasByModel.map((item) => (
                 <ListItem
                   key={item.model}
                   sx={{

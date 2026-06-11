@@ -85,7 +85,7 @@ export default function CameraDetailPage() {
     enabled: !isNaN(cameraId) && !!camera,
   });
 
-  const { data: totalCost = 0 } = useQuery({
+  const { data: totalCost, isLoading: totalCostLoading } = useQuery({
     queryKey: ["maintenance-total-cost", cameraId],
     queryFn: () => fetchMaintenanceTotalCost(cameraId),
     enabled: !isNaN(cameraId) && !!camera,
@@ -242,7 +242,13 @@ export default function CameraDetailPage() {
               保养记录
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              累计保养费用：<strong style={{ color: "primary.main" }}>¥{totalCost.toFixed(2)}</strong>
+              累计保养费用：{totalCostLoading ? (
+                <CircularProgress size={14} sx={{ verticalAlign: "middle" }} />
+              ) : (
+                <Typography component="strong" variant="body2" fontWeight={600} color="primary">
+                  ¥{(totalCost ?? 0).toFixed(2)}
+                </Typography>
+              )}
             </Typography>
           </Box>
 
@@ -276,6 +282,7 @@ export default function CameraDetailPage() {
               type="number"
               size="small"
               sx={{ width: 120 }}
+              inputProps={{ min: 0 }}
               value={maintenanceForm.cost}
               onChange={(e) =>
                 setMaintenanceForm({ ...maintenanceForm, cost: Number(e.target.value) || 0 })

@@ -137,6 +137,14 @@ export function initDb(): void {
     db.exec(`
       ALTER TABLE maintenance_records ADD COLUMN cost REAL NOT NULL DEFAULT 0;
     `);
+
+    const backfill = db.prepare(
+      "UPDATE maintenance_records SET cost = ? WHERE content = ?"
+    );
+    backfill.run(280, "传感器清洁 + 固件升级");
+    backfill.run(150, "快门检测，计数正常");
+    backfill.run(50, "更换目镜保护膜");
+    backfill.run(120, "卡口与触点清洁保养");
   }
 
   const camCount = db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number };

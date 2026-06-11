@@ -25,7 +25,12 @@ router.post("/cameras/:cameraId/maintenance", (req, res) => {
     res.status(400).json({ error: "日期和内容为必填项" });
     return;
   }
-  const record = createMaintenance(cameraId, { maintenance_date, content, cost: Number(cost) || 0 });
+  const costValue = Number(cost) || 0;
+  if (costValue < 0) {
+    res.status(400).json({ error: "费用不能为负数" });
+    return;
+  }
+  const record = createMaintenance(cameraId, { maintenance_date, content, cost: costValue });
   if (!record) {
     res.status(404).json({ error: "相机不存在" });
     return;

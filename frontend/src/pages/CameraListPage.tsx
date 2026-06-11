@@ -5,11 +5,16 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   Tooltip,
   Typography,
@@ -20,13 +25,20 @@ import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createCamera, deleteCamera, fetchCameras } from "../api/client";
-import type { CameraFormData } from "../types";
+import { CAMERA_STATUSES, type CameraFormData, type CameraStatus } from "../types";
 
 const emptyForm: CameraFormData = {
   model: "",
   purchase_date: dayjs().format("YYYY-MM-DD"),
   estimated_shutter_count: 0,
   notes: "",
+  status: "使用中",
+};
+
+const statusColorMap: Record<CameraStatus, "success" | "warning" | "default"> = {
+  使用中: "success",
+  维修中: "warning",
+  闲置: "default",
 };
 
 export default function CameraListPage() {
@@ -34,10 +46,11 @@ export default function CameraListPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CameraFormData>(emptyForm);
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const { data: cameras = [], isLoading, isError } = useQuery({
-    queryKey: ["cameras"],
-    queryFn: fetchCameras,
+    queryKey: ["cameras", statusFilter],
+    queryFn: () => fetchCameras(statusFilter || undefined),
   });
 
   const createMutation = useMutation({
@@ -68,6 +81,19 @@ export default function CameraListPage() {
         headerName: "预估快门数",
         width: 120,
         type: "number",
+      },
+      {
+        field: "status",
+        headerName: "状态",
+        width: 110,
+        renderCell: (params) => (
+          <Chip
+            label={params.value}
+            color={statusColorMap[params.value as CameraStatus]}
+            size="small"
+            variant="outlined"
+          />
+        ),
       },
       { field: "notes", headerName: "备注", flex: 1, minWidth: 180 },
       {
@@ -120,9 +146,27 @@ export default function CameraListPage() {
         <Typography variant="h5" fontWeight={600}>
           相机列表
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
-          新增相机
-        </Button>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel id="status-filter-label">状态筛选</InputLabel>
+            <Select
+              labelId="status-filter-label"
+              value={statusFilter}
+              label="状态筛选"
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <MenuItem value="">全部</MenuItem>
+              {CAMERA_STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {status}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
+            新增相机
+          </Button>
+        </Box>
       </Box>
 
       {isError && <Alert severity="error" sx={{ mb: 2 }}>加载失败，请确认后端已启动</Alert>}
@@ -172,6 +216,21 @@ export default function CameraListPage() {
               setForm({ ...form, estimated_shutter_count: Number(e.target.value) })
             }
           />
+          <FormControl>
+            <InputLabel id="new-camera-status-label">状态</InputLabel>
+            <Select
+              labelId="new-camera-status-label"
+              value={form.status}
+              label="状态"
+              onChange={(e) => setForm({ ...form, status: e.target.value as CameraStatus })}
+            >
+              {CAMERA_STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {status}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="备注"
             multiline

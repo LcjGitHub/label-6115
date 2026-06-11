@@ -1,9 +1,14 @@
+export type CameraStatus = "使用中" | "维修中" | "闲置";
+
+export const CAMERA_STATUSES: CameraStatus[] = ["使用中", "维修中", "闲置"];
+
 export interface Camera {
   id: number;
   model: string;
   purchase_date: string;
   estimated_shutter_count: number;
   notes: string;
+  status: CameraStatus;
 }
 
 export interface MaintenanceRecord {
@@ -18,6 +23,7 @@ export interface CameraFormData {
   purchase_date: string;
   estimated_shutter_count: number;
   notes: string;
+  status: CameraStatus;
 }
 
 export interface MaintenanceFormData {

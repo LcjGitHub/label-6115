@@ -11,10 +11,14 @@ import {
   CircularProgress,
   createFilterOptions,
   Divider,
+  FormControl,
   IconButton,
+  InputLabel,
   List,
   ListItem,
   ListItemText,
+  MenuItem,
+  Select,
   TextField,
   Typography,
 } from "@mui/material";
@@ -30,7 +34,7 @@ import {
   fetchMaintenanceTypes,
   updateCamera,
 } from "../api/client";
-import type { CameraFormData, MaintenanceFormData } from "../types";
+import { CAMERA_STATUSES, type CameraFormData, type CameraStatus, type MaintenanceFormData } from "../types";
 
 const filterOptions = createFilterOptions<string>({
   stringify: (option) => option,
@@ -93,6 +97,7 @@ export default function CameraDetailPage() {
         purchase_date: camera.purchase_date,
         estimated_shutter_count: camera.estimated_shutter_count,
         notes: camera.notes,
+        status: camera.status,
       }
     : null);
 
@@ -154,9 +159,27 @@ export default function CameraDetailPage() {
                 setCameraForm({ ...form, estimated_shutter_count: Number(e.target.value) });
               }}
             />
+            <FormControl>
+              <InputLabel id="camera-status-label">状态</InputLabel>
+              <Select
+                labelId="camera-status-label"
+                value={form.status}
+                label="状态"
+                onChange={(e) => {
+                  setCameraForm({ ...form, status: e.target.value as CameraStatus });
+                }}
+              >
+                {CAMERA_STATUSES.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {status}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <TextField
               label="备注"
               value={form.notes}
+              sx={{ gridColumn: { xs: "1 / -1", sm: "1 / -1" } }}
               onChange={(e) => {
                 setCameraForm({ ...form, notes: e.target.value });
               }}

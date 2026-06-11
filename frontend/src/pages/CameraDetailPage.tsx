@@ -33,6 +33,7 @@ import {
   deleteMaintenance,
   fetchCamera,
   fetchMaintenance,
+  fetchMaintenanceTotalCost,
   fetchMaintenanceTypes,
   updateCamera,
 } from "../api/client";
@@ -60,6 +61,7 @@ export default function CameraDetailPage() {
   const [maintenanceForm, setMaintenanceForm] = useState<MaintenanceFormData>({
     maintenance_date: dayjs().format("YYYY-MM-DD"),
     content: "",
+    cost: 0,
   });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -83,6 +85,12 @@ export default function CameraDetailPage() {
     enabled: !isNaN(cameraId) && !!camera,
   });
 
+  const { data: totalCost = 0 } = useQuery({
+    queryKey: ["maintenance-total-cost", cameraId],
+    queryFn: () => fetchMaintenanceTotalCost(cameraId),
+    enabled: !isNaN(cameraId) && !!camera,
+  });
+
   const { data: maintenanceTypes = [] } = useQuery({
     queryKey: ["maintenance-types"],
     queryFn: fetchMaintenanceTypes,
@@ -103,7 +111,8 @@ export default function CameraDetailPage() {
     mutationFn: (payload: MaintenanceFormData) => createMaintenance(cameraId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenance", cameraId] });
-      setMaintenanceForm({ maintenance_date: dayjs().format("YYYY-MM-DD"), content: "" });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-total-cost", cameraId] });
+      setMaintenanceForm({ maintenance_date: dayjs().format("YYYY-MM-DD"), content: "", cost: 0 });
     },
     onError: (err) => {
       setErrorMsg("添加保养失败：" + getErrorMsg(err, "请稍后重试"));
@@ -112,7 +121,10 @@ export default function CameraDetailPage() {
 
   const deleteMaintenanceMutation = useMutation({
     mutationFn: deleteMaintenance,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maintenance", cameraId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maintenance", cameraId] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance-total-cost", cameraId] });
+    },
     onError: (err) => {
       setErrorMsg("删除保养失败：" + getErrorMsg(err, "请稍后重试"));
     },
@@ -225,9 +237,14 @@ export default function CameraDetailPage() {
 
       <Card>
         <CardContent>
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            保养记录
-          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Typography variant="h6" fontWeight={600}>
+              保养记录
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              累计保养费用：<strong style={{ color: "primary.main" }}>¥{totalCost.toFixed(2)}</strong>
+            </Typography>
+          </Box>
 
           <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "flex-end" }}>
             <TextField
@@ -253,6 +270,16 @@ export default function CameraDetailPage() {
               renderInput={(params) => (
                 <TextField {...params} label="保养内容" />
               )}
+            />
+            <TextField
+              label="费用(元)"
+              type="number"
+              size="small"
+              sx={{ width: 120 }}
+              value={maintenanceForm.cost}
+              onChange={(e) =>
+                setMaintenanceForm({ ...maintenanceForm, cost: Number(e.target.value) || 0 })
+              }
             />
             <Button
               variant="outlined"
@@ -293,7 +320,14 @@ export default function CameraDetailPage() {
                   sx={{ bgcolor: "grey.50", mb: 1, borderRadius: 1 }}
                 >
                   <ListItemText
-                    primary={record.content}
+                    primary={
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>{record.content}</span>
+                        <Typography variant="body2" fontWeight={600} color="primary">
+                          ¥{record.cost.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    }
                     secondary={dayjs(record.maintenance_date).format("YYYY-MM-DD")}
                   />
                 </ListItem>

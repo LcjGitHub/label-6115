@@ -16,6 +16,7 @@ export interface MaintenanceRecord {
   camera_id: number;
   maintenance_date: string;
   content: string;
+  cost: number;
 }
 
 export interface CameraFormData {
@@ -29,6 +30,7 @@ export interface CameraFormData {
 export interface MaintenanceFormData {
   maintenance_date: string;
   content: string;
+  cost: number;
 }
 
 export interface MaintenanceType {

@@ -47,6 +47,11 @@ export async function fetchMaintenance(cameraId: number): Promise<MaintenanceRec
   return data;
 }
 
+export async function fetchMaintenanceTotalCost(cameraId: number): Promise<number> {
+  const { data } = await api.get<{ total_cost: number }>(`/cameras/${cameraId}/maintenance/total-cost`);
+  return data.total_cost;
+}
+
 export async function createMaintenance(
   cameraId: number,
   payload: MaintenanceFormData

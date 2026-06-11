@@ -28,6 +28,7 @@ export interface MaintenanceRecord {
   camera_id: number;
   maintenance_date: string;
   content: string;
+  cost: number;
 }
 
 export interface MaintenanceType {
@@ -78,6 +79,7 @@ export function initDb(): void {
       camera_id INTEGER NOT NULL,
       maintenance_date TEXT NOT NULL,
       content TEXT NOT NULL,
+      cost REAL NOT NULL DEFAULT 0,
       FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
     );
 
@@ -117,13 +119,23 @@ export function initDb(): void {
     );
   `);
 
-  const columns = db
+  const camColumns = db
     .prepare("PRAGMA table_info(cameras)")
     .all() as { name: string }[];
-  const hasStatusColumn = columns.some((col) => col.name === "status");
+  const hasStatusColumn = camColumns.some((col) => col.name === "status");
   if (!hasStatusColumn) {
     db.exec(`
       ALTER TABLE cameras ADD COLUMN status TEXT NOT NULL DEFAULT '使用中';
+    `);
+  }
+
+  const mrColumns = db
+    .prepare("PRAGMA table_info(maintenance_records)")
+    .all() as { name: string }[];
+  const hasCostColumn = mrColumns.some((col) => col.name === "cost");
+  if (!hasCostColumn) {
+    db.exec(`
+      ALTER TABLE maintenance_records ADD COLUMN cost REAL NOT NULL DEFAULT 0;
     `);
   }
 
@@ -143,8 +155,8 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
   `);
 
   const insertMaintenance = db.prepare(`
-    INSERT INTO maintenance_records (camera_id, maintenance_date, content)
-    VALUES (?, ?, ?)
+    INSERT INTO maintenance_records (camera_id, maintenance_date, content, cost)
+    VALUES (?, ?, ?, ?)
   `);
 
   const insertShutterCount = db.prepare(`
@@ -177,10 +189,10 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
       cam1Id = cam1.lastInsertRowid;
       cam2Id = cam2.lastInsertRowid;
 
-      insertMaintenance.run(cam1Id, "2024-01-10", "传感器清洁 + 固件升级");
-      insertMaintenance.run(cam1Id, "2024-09-05", "快门检测，计数正常");
-      insertMaintenance.run(cam2Id, "2024-02-18", "更换目镜保护膜");
-      insertMaintenance.run(cam2Id, "2024-11-12", "卡口与触点清洁保养");
+      insertMaintenance.run(cam1Id, "2024-01-10", "传感器清洁 + 固件升级", 280);
+      insertMaintenance.run(cam1Id, "2024-09-05", "快门检测，计数正常", 150);
+      insertMaintenance.run(cam2Id, "2024-02-18", "更换目镜保护膜", 50);
+      insertMaintenance.run(cam2Id, "2024-11-12", "卡口与触点清洁保养", 120);
 
       insertShutterCount.run(cam1Id, "2024-10-01", 1200, "风光外拍");
       insertShutterCount.run(cam1Id, "2024-11-15", 800, "棚拍");
@@ -265,16 +277,16 @@ export function getMaintenanceByCameraId(cameraId: number): MaintenanceRecord[] 
 
 export function createMaintenance(
   cameraId: number,
-  data: { maintenance_date: string; content: string }
+  data: { maintenance_date: string; content: string; cost?: number }
 ): MaintenanceRecord | undefined {
   if (!getCameraById(cameraId)) return undefined;
 
   const result = db
     .prepare(
-      `INSERT INTO maintenance_records (camera_id, maintenance_date, content)
-       VALUES (?, ?, ?)`
+      `INSERT INTO maintenance_records (camera_id, maintenance_date, content, cost)
+       VALUES (?, ?, ?, ?)`
     )
-    .run(cameraId, data.maintenance_date, data.content);
+    .run(cameraId, data.maintenance_date, data.content, data.cost ?? 0);
 
   return db
     .prepare("SELECT * FROM maintenance_records WHERE id = ?")
@@ -284,6 +296,13 @@ export function createMaintenance(
 export function deleteMaintenance(id: number): boolean {
   const result = db.prepare("DELETE FROM maintenance_records WHERE id = ?").run(id);
   return result.changes > 0;
+}
+
+export function getMaintenanceTotalCostByCameraId(cameraId: number): number {
+  const row = db
+    .prepare("SELECT COALESCE(SUM(cost), 0) as total FROM maintenance_records WHERE camera_id = ?")
+    .get(cameraId) as { total: number };
+  return row.total;
 }
 
 export function getShutterCounts(cameraId?: number): ShutterCountRecord[] {

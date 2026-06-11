@@ -4,6 +4,7 @@ import {
   deleteMaintenance,
   getCameraById,
   getMaintenanceByCameraId,
+  getMaintenanceTotalCostByCameraId,
 } from "../db";
 
 const router = Router();
@@ -19,17 +20,27 @@ router.get("/cameras/:cameraId/maintenance", (req, res) => {
 
 router.post("/cameras/:cameraId/maintenance", (req, res) => {
   const cameraId = Number(req.params.cameraId);
-  const { maintenance_date, content } = req.body;
+  const { maintenance_date, content, cost } = req.body;
   if (!maintenance_date || !content) {
     res.status(400).json({ error: "日期和内容为必填项" });
     return;
   }
-  const record = createMaintenance(cameraId, { maintenance_date, content });
+  const record = createMaintenance(cameraId, { maintenance_date, content, cost: Number(cost) || 0 });
   if (!record) {
     res.status(404).json({ error: "相机不存在" });
     return;
   }
   res.status(201).json(record);
+});
+
+router.get("/cameras/:cameraId/maintenance/total-cost", (req, res) => {
+  const cameraId = Number(req.params.cameraId);
+  if (!getCameraById(cameraId)) {
+    res.status(404).json({ error: "相机不存在" });
+    return;
+  }
+  const total = getMaintenanceTotalCostByCameraId(cameraId);
+  res.json({ total_cost: total });
 });
 
 router.delete("/maintenance/:id", (req, res) => {

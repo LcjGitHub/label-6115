@@ -7,6 +7,7 @@ import maintenanceRouter from "./routes/maintenance";
 import maintenanceTypesRouter from "./routes/maintenanceTypes";
 import shutterCountsRouter from "./routes/shutterCounts";
 import statisticsRouter from "./routes/statistics";
+import usageLogsRouter from "./routes/usageLogs";
 
 const PORT = 6000;
 
@@ -22,6 +23,7 @@ app.use("/api", maintenanceRouter);
 app.use("/api/maintenance-types", maintenanceTypesRouter);
 app.use("/api/shutter-counts", shutterCountsRouter);
 app.use("/api/statistics", statisticsRouter);
+app.use("/api/usage-logs", usageLogsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

@@ -1,5 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DescriptionIcon from "@mui/icons-material/Description";
 import {
   Alert,
   Box,
@@ -71,22 +72,34 @@ export default function CameraListPage() {
       {
         field: "actions",
         headerName: "操作",
-        width: 80,
+        width: 120,
         sortable: false,
         filterable: false,
         renderCell: (params) => (
-          <IconButton
-            size="small"
-            color="error"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (window.confirm("确定删除该相机？")) {
-                deleteMutation.mutate(params.row.id);
-              }
-            }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/cameras/${params.row.id}/usage-logs`);
+              }}
+            >
+              <DescriptionIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm("确定删除该相机？")) {
+                  deleteMutation.mutate(params.row.id);
+                }
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
         ),
       },
     ],

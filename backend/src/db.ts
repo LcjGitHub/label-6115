@@ -51,6 +51,14 @@ export interface LensAccessory {
   notes: string;
 }
 
+export interface UsageLog {
+  id: number;
+  camera_id: number;
+  record_date: string;
+  content: string;
+  recorder: string;
+}
+
 export function initDb(): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS cameras (
@@ -94,17 +102,27 @@ export function initDb(): void {
       notes TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS usage_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      camera_id INTEGER NOT NULL,
+      record_date TEXT NOT NULL,
+      content TEXT NOT NULL,
+      recorder TEXT NOT NULL,
+      FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+    );
   `);
 
   const camCount = db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number };
   const mtCount = db.prepare("SELECT COUNT(*) as c FROM maintenance_types").get() as { c: number };
   const laCount = db.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
-  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0) {
-    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0);
+  const ulCount = db.prepare("SELECT COUNT(*) as c FROM usage_logs").get() as { c: number };
+  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0) {
+    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0);
   }
 }
 
-function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean): void {
+function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean): void {
   const insertCamera = db.prepare(`
     INSERT INTO cameras (model, purchase_date, estimated_shutter_count, notes)
     VALUES (?, ?, ?, ?)
@@ -128,6 +146,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
   const insertLensAccessory = db.prepare(`
     INSERT INTO lens_accessories (camera_id, accessory_name, focal_length_description, purchase_date, notes)
     VALUES (?, ?, ?, ?, ?)
+  `);
+
+  const insertUsageLog = db.prepare(`
+    INSERT INTO usage_logs (camera_id, record_date, content, recorder)
+    VALUES (?, ?, ?, ?)
   `);
 
   const seed = db.transaction(() => {
@@ -169,6 +192,12 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
     if (seedLensAccessories && cam1Id && cam2Id) {
       insertLensAccessory.run(cam1Id, "RF 24-70mm F2.8 L IS USM", "24-70mm f/2.8 标准变焦", "2022-04-10", "日常挂机头，风光人像通吃");
       insertLensAccessory.run(cam2Id, "FE 85mm F1.4 GM", "85mm f/1.4 定焦人像", "2023-09-15", "大光圈人像镜头，虚化效果出色");
+    }
+
+    if (seedUsageLogs && cam1Id && cam2Id) {
+      insertUsageLog.run(cam1Id, "2024-06-15", "西藏风光采风，使用高海拔拍摄模式", "张三");
+      insertUsageLog.run(cam1Id, "2024-12-20", "室内人像棚拍，配合闪光灯使用", "李四");
+      insertUsageLog.run(cam2Id, "2024-07-08", "城市街拍活动，全程手持拍摄", "王五");
     }
   });
 
@@ -374,6 +403,30 @@ export function createLensAccessory(
 export function deleteLensAccessory(id: number): boolean {
   const result = db.prepare("DELETE FROM lens_accessories WHERE id = ?").run(id);
   return result.changes > 0;
+}
+
+export function getUsageLogsByCameraId(cameraId: number): UsageLog[] {
+  return db
+    .prepare("SELECT * FROM usage_logs WHERE camera_id = ? ORDER BY record_date DESC")
+    .all(cameraId) as UsageLog[];
+}
+
+export function createUsageLog(
+  cameraId: number,
+  data: { record_date: string; content: string; recorder: string }
+): UsageLog | undefined {
+  if (!getCameraById(cameraId)) return undefined;
+
+  const result = db
+    .prepare(
+      `INSERT INTO usage_logs (camera_id, record_date, content, recorder)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(cameraId, data.record_date, data.content, data.recorder);
+
+  return db
+    .prepare("SELECT * FROM usage_logs WHERE id = ?")
+    .get(result.lastInsertRowid) as UsageLog;
 }
 
 export default db;

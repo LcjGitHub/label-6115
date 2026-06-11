@@ -7,6 +7,7 @@ import { AppBar, Box, Container, Toolbar, Typography } from "@mui/material";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import CameraDetailPage from "./pages/CameraDetailPage";
 import CameraListPage from "./pages/CameraListPage";
+import CameraUsageLogPage from "./pages/CameraUsageLogPage";
 import LensAccessoryPage from "./pages/LensAccessoryPage";
 import MaintenanceTypePage from "./pages/MaintenanceTypePage";
 import OverviewPage from "./pages/OverviewPage";
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="/" element={<CameraListPage />} />
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/cameras/:id" element={<CameraDetailPage />} />
+          <Route path="/cameras/:id/usage-logs" element={<CameraUsageLogPage />} />
           <Route path="/lens-accessories" element={<LensAccessoryPage />} />
           <Route path="/shutter-counts" element={<ShutterCountPage />} />
           <Route path="/maintenance-types" element={<MaintenanceTypePage />} />

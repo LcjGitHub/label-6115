@@ -81,3 +81,17 @@ export interface StatisticsOverview {
   highShutterCameras: number;
   camerasByModel: ModelCount[];
 }
+
+export interface UsageLog {
+  id: number;
+  camera_id: number;
+  record_date: string;
+  content: string;
+  recorder: string;
+}
+
+export interface UsageLogFormData {
+  record_date: string;
+  content: string;
+  recorder: string;
+}

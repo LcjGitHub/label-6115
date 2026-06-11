@@ -11,6 +11,8 @@ import type {
   ShutterCountFormData,
   ShutterCountRecord,
   StatisticsOverview,
+  UsageLog,
+  UsageLogFormData,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
@@ -103,4 +105,17 @@ export async function createLensAccessory(
 
 export async function deleteLensAccessory(id: number): Promise<void> {
   await api.delete(`/lens-accessories/${id}`);
+}
+
+export async function fetchUsageLogs(cameraId: number): Promise<UsageLog[]> {
+  const { data } = await api.get<UsageLog[]>(`/usage-logs/${cameraId}`);
+  return data;
+}
+
+export async function createUsageLog(
+  cameraId: number,
+  payload: UsageLogFormData
+): Promise<UsageLog> {
+  const { data } = await api.post<UsageLog>(`/usage-logs/${cameraId}`, payload);
+  return data;
 }

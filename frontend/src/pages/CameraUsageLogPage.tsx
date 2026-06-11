@@ -7,16 +7,19 @@ import {
   Button,
   Card,
   CardContent,
+  CircularProgress,
   Divider,
   List,
   ListItem,
   ListItemText,
+  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { createUsageLog, fetchCamera, fetchUsageLogs } from "../api/client";
 import type { UsageLogFormData } from "../types";
@@ -27,12 +30,25 @@ const emptyForm: UsageLogFormData = {
   recorder: "",
 };
 
+function getErrorMsg(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data?.error) {
+    return String(err.response.data.error);
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export default function CameraUsageLogPage() {
   const { id } = useParams<{ id: string }>();
   const cameraId = Number(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<UsageLogFormData>(emptyForm);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => setErrorMsg(null);
+  }, []);
 
   const { data: camera } = useQuery({
     queryKey: ["camera", cameraId],
@@ -55,6 +71,9 @@ export default function CameraUsageLogPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usage-logs", cameraId] });
       setForm(emptyForm);
+    },
+    onError: (err) => {
+      setErrorMsg("提交失败：" + getErrorMsg(err, "请稍后重试"));
     },
   });
 
@@ -83,9 +102,9 @@ export default function CameraUsageLogPage() {
           </Typography>
           <Divider sx={{ mb: 1 }} />
           {isLoading ? (
-            <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
-              加载中…
-            </Typography>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress size={28} />
+            </Box>
           ) : logs.length === 0 ? (
             <Typography color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
               暂无使用日志
@@ -159,6 +178,21 @@ export default function CameraUsageLogPage() {
           </Box>
         </CardContent>
       </Card>
+
+      <Snackbar
+        open={!!errorMsg}
+        autoHideDuration={4000}
+        onClose={() => setErrorMsg(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setErrorMsg(null)}
+          sx={{ width: "100%" }}
+        >
+          {errorMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

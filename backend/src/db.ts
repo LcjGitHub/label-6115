@@ -198,6 +198,7 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
       insertUsageLog.run(cam1Id, "2024-06-15", "西藏风光采风，使用高海拔拍摄模式", "张三");
       insertUsageLog.run(cam1Id, "2024-12-20", "室内人像棚拍，配合闪光灯使用", "李四");
       insertUsageLog.run(cam2Id, "2024-07-08", "城市街拍活动，全程手持拍摄", "王五");
+      insertUsageLog.run(cam2Id, "2024-11-25", "视频短剧拍摄，使用稳定器辅助", "赵六");
     }
   });
 
@@ -407,7 +408,7 @@ export function deleteLensAccessory(id: number): boolean {
 
 export function getUsageLogsByCameraId(cameraId: number): UsageLog[] {
   return db
-    .prepare("SELECT * FROM usage_logs WHERE camera_id = ? ORDER BY record_date DESC")
+    .prepare("SELECT * FROM usage_logs WHERE camera_id = ? ORDER BY record_date DESC, id DESC")
     .all(cameraId) as UsageLog[];
 }
 

@@ -11,6 +11,7 @@ import {
   DialogTitle,
   IconButton,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
@@ -77,16 +78,18 @@ export default function CameraListPage() {
         filterable: false,
         renderCell: (params) => (
           <Box sx={{ display: "flex", gap: 0.5 }}>
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/cameras/${params.row.id}/usage-logs`);
-              }}
-            >
-              <DescriptionIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="日志">
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/cameras/${params.row.id}/usage-logs`);
+                }}
+              >
+                <DescriptionIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <IconButton
               size="small"
               color="error"

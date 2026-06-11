@@ -5,6 +5,7 @@ import camerasRouter from "./routes/cameras";
 import lensAccessoriesRouter from "./routes/lensAccessories";
 import maintenanceRouter from "./routes/maintenance";
 import maintenanceTypesRouter from "./routes/maintenanceTypes";
+import repairServiceProvidersRouter from "./routes/repairServiceProviders";
 import shutterCountsRouter from "./routes/shutterCounts";
 import statisticsRouter from "./routes/statistics";
 import usageLogsRouter from "./routes/usageLogs";
@@ -20,6 +21,7 @@ export function createApp(): express.Express {
   app.use("/api/lens-accessories", lensAccessoriesRouter);
   app.use("/api", maintenanceRouter);
   app.use("/api/maintenance-types", maintenanceTypesRouter);
+  app.use("/api/repair-service-providers", repairServiceProvidersRouter);
   app.use("/api/shutter-counts", shutterCountsRouter);
   app.use("/api/statistics", statisticsRouter);
   app.use("/api/usage-logs", usageLogsRouter);

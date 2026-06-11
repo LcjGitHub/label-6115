@@ -1,5 +1,6 @@
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import BuildCircleIcon from "@mui/icons-material/BuildCircle";
 import BuildIcon from "@mui/icons-material/Build";
 import LensIcon from "@mui/icons-material/Lens";
 import ShutterSpeedIcon from "@mui/icons-material/ShutterSpeed";
@@ -11,12 +12,14 @@ import CameraUsageLogPage from "./pages/CameraUsageLogPage";
 import LensAccessoryPage from "./pages/LensAccessoryPage";
 import MaintenanceTypePage from "./pages/MaintenanceTypePage";
 import OverviewPage from "./pages/OverviewPage";
+import RepairServiceProviderPage from "./pages/RepairServiceProviderPage";
 import ShutterCountPage from "./pages/ShutterCountPage";
 
 const navItems = [
   { label: "配件管理", to: "/lens-accessories", icon: <LensIcon fontSize="small" /> },
   { label: "快门记录", to: "/shutter-counts", icon: <ShutterSpeedIcon fontSize="small" /> },
   { label: "保养类型", to: "/maintenance-types", icon: <BuildIcon fontSize="small" /> },
+  { label: "维修服务商", to: "/repair-service-providers", icon: <BuildCircleIcon fontSize="small" /> },
   { label: "数据概览", to: "/overview", icon: <BarChartIcon fontSize="small" /> },
 ];
 
@@ -90,6 +93,7 @@ export default function App() {
           <Route path="/lens-accessories" element={<LensAccessoryPage />} />
           <Route path="/shutter-counts" element={<ShutterCountPage />} />
           <Route path="/maintenance-types" element={<MaintenanceTypePage />} />
+          <Route path="/repair-service-providers" element={<RepairServiceProviderPage />} />
         </Routes>
       </Container>
     </Box>

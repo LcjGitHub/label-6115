@@ -108,3 +108,18 @@ export interface UsageLogFormData {
   content: string;
   recorder: string;
 }
+
+export interface RepairServiceProvider {
+  id: number;
+  provider_name: string;
+  phone: string;
+  address: string;
+  notes: string;
+}
+
+export interface RepairServiceProviderFormData {
+  provider_name: string;
+  phone: string;
+  address: string;
+  notes: string;
+}

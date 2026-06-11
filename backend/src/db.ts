@@ -103,6 +103,14 @@ export interface UsageLog {
   recorder: string;
 }
 
+export interface RepairServiceProvider {
+  id: number;
+  provider_name: string;
+  phone: string;
+  address: string;
+  notes: string;
+}
+
 export function initDb(): void {
   const database = getDb();
   database.exec(`
@@ -160,6 +168,14 @@ export function initDb(): void {
       recorder TEXT NOT NULL,
       FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS repair_service_providers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider_name TEXT NOT NULL,
+      phone TEXT NOT NULL DEFAULT '',
+      address TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT ''
+    );
   `);
 
   const camColumns = database
@@ -213,12 +229,13 @@ export function initDb(): void {
   const mtCount = database.prepare("SELECT COUNT(*) as c FROM maintenance_types").get() as { c: number };
   const laCount = database.prepare("SELECT COUNT(*) as c FROM lens_accessories").get() as { c: number };
   const ulCount = database.prepare("SELECT COUNT(*) as c FROM usage_logs").get() as { c: number };
-  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0) {
-    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0);
+  const rspCount = database.prepare("SELECT COUNT(*) as c FROM repair_service_providers").get() as { c: number };
+  if (camCount.c === 0 || mtCount.c === 0 || laCount.c === 0 || ulCount.c === 0 || rspCount.c === 0) {
+    seedData(camCount.c === 0, mtCount.c === 0, laCount.c === 0, ulCount.c === 0, rspCount.c === 0);
   }
 }
 
-function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean): void {
+function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean, seedRepairServiceProviders: boolean): void {
   const database = getDb();
   const insertCamera = database.prepare(`
     INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life)
@@ -247,6 +264,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
 
   const insertUsageLog = database.prepare(`
     INSERT INTO usage_logs (camera_id, record_date, content, recorder)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const insertRepairServiceProvider = database.prepare(`
+    INSERT INTO repair_service_providers (provider_name, phone, address, notes)
     VALUES (?, ?, ?, ?)
   `);
 
@@ -296,6 +318,11 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
       insertUsageLog.run(cam1Id, "2024-12-20", "室内人像棚拍，配合闪光灯使用", "李四");
       insertUsageLog.run(cam2Id, "2024-07-08", "城市街拍活动，全程手持拍摄", "王五");
       insertUsageLog.run(cam2Id, "2024-11-25", "视频短剧拍摄，使用稳定器辅助", "赵六");
+    }
+
+    if (seedRepairServiceProviders) {
+      insertRepairServiceProvider.run("星辰专业相机维修中心", "400-888-1234", "北京市朝阳区建国路88号", "专注佳能、索尼高端相机维修，官方授权服务商");
+      insertRepairServiceProvider.run("光影影像设备维保", "021-6666-7788", "上海市徐汇区漕溪北路100号", "提供镜头清洁、传感器除尘、快门更换等全系列服务");
     }
   });
 
@@ -576,6 +603,29 @@ export function createUsageLog(
   return getDb()
     .prepare("SELECT * FROM usage_logs WHERE id = ?")
     .get(result.lastInsertRowid) as UsageLog;
+}
+
+export function getAllRepairServiceProviders(): RepairServiceProvider[] {
+  return getDb().prepare("SELECT * FROM repair_service_providers ORDER BY id").all() as RepairServiceProvider[];
+}
+
+export function createRepairServiceProvider(
+  data: { provider_name: string; phone: string; address: string; notes: string }
+): RepairServiceProvider {
+  const result = db
+    .prepare(
+      `INSERT INTO repair_service_providers (provider_name, phone, address, notes)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(data.provider_name.trim(), data.phone ?? "", data.address ?? "", data.notes ?? "");
+  return db
+    .prepare("SELECT * FROM repair_service_providers WHERE id = ?")
+    .get(result.lastInsertRowid) as RepairServiceProvider;
+}
+
+export function deleteRepairServiceProvider(id: number): boolean {
+  const result = getDb().prepare("DELETE FROM repair_service_providers WHERE id = ?").run(id);
+  return result.changes > 0;
 }
 
 export default getDb();

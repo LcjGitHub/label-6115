@@ -8,6 +8,8 @@ import type {
   MaintenanceRecord,
   MaintenanceType,
   MaintenanceTypeFormData,
+  RepairServiceProvider,
+  RepairServiceProviderFormData,
   ShutterCountFormData,
   ShutterCountRecord,
   StatisticsOverview,
@@ -135,4 +137,20 @@ export async function createUsageLog(
 ): Promise<UsageLog> {
   const { data } = await api.post<UsageLog>(`/usage-logs/${cameraId}`, payload);
   return data;
+}
+
+export async function fetchRepairServiceProviders(): Promise<RepairServiceProvider[]> {
+  const { data } = await api.get<RepairServiceProvider[]>("/repair-service-providers");
+  return data;
+}
+
+export async function createRepairServiceProvider(
+  payload: RepairServiceProviderFormData
+): Promise<RepairServiceProvider> {
+  const { data } = await api.post<RepairServiceProvider>("/repair-service-providers", payload);
+  return data;
+}
+
+export async function deleteRepairServiceProvider(id: number): Promise<void> {
+  await api.delete(`/repair-service-providers/${id}`);
 }

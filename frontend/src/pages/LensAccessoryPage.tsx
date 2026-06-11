@@ -15,22 +15,21 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { zhCN } from "@mui/x-data-grid/locales";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createLensAccessory,
   deleteLensAccessory,
   fetchCameras,
   fetchLensAccessories,
 } from "../api/client";
+import { useErrorSnackbar } from "../hooks/useErrorSnackbar";
 import type { LensAccessoryFormData } from "../types";
 
 const emptyForm: LensAccessoryFormData = {
@@ -41,24 +40,12 @@ const emptyForm: LensAccessoryFormData = {
   notes: "",
 };
 
-function getErrorMsg(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err) && err.response?.data?.error) {
-    return String(err.response.data.error);
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
-
 export default function LensAccessoryPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<LensAccessoryFormData>(emptyForm);
   const [filterCameraId, setFilterCameraId] = useState<number | "all">("all");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => setErrorMsg(null);
-  }, []);
+  const { showError, ErrorSnackbar } = useErrorSnackbar();
 
   const { data: cameras = [], isLoading: camerasLoading } = useQuery({
     queryKey: ["cameras"],
@@ -90,7 +77,7 @@ export default function LensAccessoryPage() {
       setForm(emptyForm);
     },
     onError: (err) => {
-      setErrorMsg("新增失败：" + getErrorMsg(err, "请稍后重试"));
+      showError("新增失败：", err);
     },
   });
 
@@ -98,7 +85,7 @@ export default function LensAccessoryPage() {
     mutationFn: deleteLensAccessory,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lensAccessories"] }),
     onError: (err) => {
-      setErrorMsg("删除失败：" + getErrorMsg(err, "请稍后重试"));
+      showError("删除失败：", err);
     },
   });
 
@@ -277,20 +264,7 @@ export default function LensAccessoryPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!errorMsg}
-        autoHideDuration={4000}
-        onClose={() => setErrorMsg(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          severity="error"
-          onClose={() => setErrorMsg(null)}
-          sx={{ width: "100%" }}
-        >
-          {errorMsg}
-        </Alert>
-      </Snackbar>
+      <ErrorSnackbar />
     </Box>
   );
 }

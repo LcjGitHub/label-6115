@@ -13,16 +13,15 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createShutterCount, deleteShutterCount, fetchCameras, fetchShutterCounts } from "../api/client";
+import { useErrorSnackbar } from "../hooks/useErrorSnackbar";
 import type { ShutterCountFormData } from "../types";
 
 const emptyForm: ShutterCountFormData = {
@@ -32,24 +31,12 @@ const emptyForm: ShutterCountFormData = {
   notes: "",
 };
 
-function getErrorMsg(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err) && err.response?.data?.error) {
-    return String(err.response.data.error);
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
-
 export default function ShutterCountPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ShutterCountFormData>(emptyForm);
   const [filterCameraId, setFilterCameraId] = useState<number | "all">("all");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => setErrorMsg(null);
-  }, []);
+  const { showError, ErrorSnackbar } = useErrorSnackbar();
 
   const { data: cameras = [], isLoading: camerasLoading } = useQuery({
     queryKey: ["cameras"],
@@ -81,7 +68,7 @@ export default function ShutterCountPage() {
       setForm(emptyForm);
     },
     onError: (err) => {
-      setErrorMsg("登记失败：" + getErrorMsg(err, "请稍后重试"));
+      showError("登记失败：", err);
     },
   });
 
@@ -89,7 +76,7 @@ export default function ShutterCountPage() {
     mutationFn: deleteShutterCount,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shutter-counts"] }),
     onError: (err) => {
-      setErrorMsg("删除失败：" + getErrorMsg(err, "请稍后重试"));
+      showError("删除失败：", err);
     },
   });
 
@@ -257,20 +244,7 @@ export default function ShutterCountPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!errorMsg}
-        autoHideDuration={4000}
-        onClose={() => setErrorMsg(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          severity="error"
-          onClose={() => setErrorMsg(null)}
-          sx={{ width: "100%" }}
-        >
-          {errorMsg}
-        </Alert>
-      </Snackbar>
+      <ErrorSnackbar />
     </Box>
   );
 }

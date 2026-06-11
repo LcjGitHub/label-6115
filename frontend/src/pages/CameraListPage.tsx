@@ -15,18 +15,17 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Snackbar,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import dayjs from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createCamera, deleteCamera, fetchCameras } from "../api/client";
+import { useErrorSnackbar } from "../hooks/useErrorSnackbar";
 import { CAMERA_STATUSES, type CameraFormData, type CameraStatus } from "../types";
 
 const emptyForm: CameraFormData = {
@@ -45,14 +44,6 @@ const statusColorMap: Record<CameraStatus, "success" | "warning" | "default"> = 
   闲置: "default",
 };
 
-function getErrorMsg(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err) && err.response?.data?.error) {
-    return String(err.response.data.error);
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
-
 export default function CameraListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -61,11 +52,7 @@ export default function CameraListPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [modelKeyword, setModelKeyword] = useState<string>("");
   const [brandFilter, setBrandFilter] = useState<string>("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => setErrorMsg(null);
-  }, []);
+  const { showError, ErrorSnackbar } = useErrorSnackbar();
 
   const {
     data: cameras = [],
@@ -101,7 +88,7 @@ export default function CameraListPage() {
       setForm(emptyForm);
     },
     onError: (err) => {
-      setErrorMsg("新增失败：" + getErrorMsg(err, "请稍后重试"));
+      showError("新增失败：", err);
     },
   });
 
@@ -109,7 +96,7 @@ export default function CameraListPage() {
     mutationFn: deleteCamera,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cameras"] }),
     onError: (err) => {
-      setErrorMsg("删除失败：" + getErrorMsg(err, "请稍后重试"));
+      showError("删除失败：", err);
     },
   });
 
@@ -353,20 +340,7 @@ export default function CameraListPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!errorMsg}
-        autoHideDuration={4000}
-        onClose={() => setErrorMsg(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          severity="error"
-          onClose={() => setErrorMsg(null)}
-          sx={{ width: "100%" }}
-        >
-          {errorMsg}
-        </Alert>
-      </Snackbar>
+      <ErrorSnackbar />
     </Box>
   );
 }

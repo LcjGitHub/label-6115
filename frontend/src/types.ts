@@ -39,3 +39,15 @@ export interface ShutterCountFormData {
   shutter_increment: number;
   notes: string;
 }
+
+export interface ModelCount {
+  model: string;
+  count: number;
+}
+
+export interface StatisticsOverview {
+  totalCameras: number;
+  totalMaintenanceRecords: number;
+  highShutterCameras: number;
+  camerasByModel: ModelCount[];
+}

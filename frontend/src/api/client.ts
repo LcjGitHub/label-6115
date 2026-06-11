@@ -1,5 +1,13 @@
 import axios from "axios";
-import type { Camera, CameraFormData, MaintenanceFormData, MaintenanceRecord, ShutterCountFormData, ShutterCountRecord } from "../types";
+import type {
+  Camera,
+  CameraFormData,
+  MaintenanceFormData,
+  MaintenanceRecord,
+  ShutterCountFormData,
+  ShutterCountRecord,
+  StatisticsOverview,
+} from "../types";
 
 const api = axios.create({ baseURL: "/api" });
 
@@ -57,4 +65,9 @@ export async function createShutterCount(payload: ShutterCountFormData): Promise
 
 export async function deleteShutterCount(id: number): Promise<void> {
   await api.delete(`/shutter-counts/${id}`);
+}
+
+export async function fetchStatisticsOverview(): Promise<StatisticsOverview> {
+  const { data } = await api.get<StatisticsOverview>("/statistics/overview");
+  return data;
 }

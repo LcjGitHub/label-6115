@@ -4,6 +4,7 @@ import { initDb } from "./db";
 import camerasRouter from "./routes/cameras";
 import maintenanceRouter from "./routes/maintenance";
 import shutterCountsRouter from "./routes/shutterCounts";
+import statisticsRouter from "./routes/statistics";
 
 const PORT = 6000;
 
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use("/api/cameras", camerasRouter);
 app.use("/api", maintenanceRouter);
 app.use("/api/shutter-counts", shutterCountsRouter);
+app.use("/api/statistics", statisticsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

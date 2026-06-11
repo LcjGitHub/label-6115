@@ -200,4 +200,45 @@ export function deleteShutterCount(id: number): boolean {
   return result.changes > 0;
 }
 
+export interface ModelCount {
+  model: string;
+  count: number;
+}
+
+export interface StatisticsOverview {
+  totalCameras: number;
+  totalMaintenanceRecords: number;
+  highShutterCameras: number;
+  camerasByModel: ModelCount[];
+}
+
+export function getStatisticsOverview(): StatisticsOverview {
+  const totalCameras = (
+    db.prepare("SELECT COUNT(*) as c FROM cameras").get() as { c: number }
+  ).c;
+
+  const totalMaintenanceRecords = (
+    db.prepare("SELECT COUNT(*) as c FROM maintenance_records").get() as { c: number }
+  ).c;
+
+  const highShutterCameras = (
+    db
+      .prepare("SELECT COUNT(*) as c FROM cameras WHERE estimated_shutter_count > 50000")
+      .get() as { c: number }
+  ).c;
+
+  const camerasByModel = db
+    .prepare(
+      "SELECT model, COUNT(*) as count FROM cameras GROUP BY model ORDER BY count DESC, model ASC"
+    )
+    .all() as ModelCount[];
+
+  return {
+    totalCameras,
+    totalMaintenanceRecords,
+    highShutterCameras,
+    camerasByModel,
+  };
+}
+
 export default db;

@@ -165,6 +165,7 @@ export default function CameraDetailPage() {
         estimated_shutter_count: camera.estimated_shutter_count,
         notes: camera.notes,
         status: (camera.status as CameraStatus) ?? "使用中",
+        rated_shutter_life: camera.rated_shutter_life ?? 200000,
       }
     : null);
 
@@ -245,6 +246,14 @@ export default function CameraDetailPage() {
               value={form.estimated_shutter_count}
               onChange={(e) => {
                 setCameraForm({ ...form, estimated_shutter_count: Number(e.target.value) });
+              }}
+            />
+            <TextField
+              label="额定快门寿命"
+              type="number"
+              value={form.rated_shutter_life}
+              onChange={(e) => {
+                setCameraForm({ ...form, rated_shutter_life: Number(e.target.value) });
               }}
             />
             <FormControl>

@@ -22,6 +22,8 @@ export interface Camera {
   estimated_shutter_count: number;
   notes: string;
   status: CameraStatus;
+  rated_shutter_life: number;
+  shutter_warning: boolean;
 }
 
 export interface MaintenanceRecord {
@@ -73,7 +75,8 @@ export function initDb(): void {
       purchase_date TEXT NOT NULL,
       estimated_shutter_count INTEGER NOT NULL DEFAULT 0,
       notes TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL DEFAULT '使用中'
+      status TEXT NOT NULL DEFAULT '使用中',
+      rated_shutter_life INTEGER NOT NULL DEFAULT 200000
     );
 
     CREATE TABLE IF NOT EXISTS maintenance_records (
@@ -140,6 +143,13 @@ export function initDb(): void {
     `);
   }
 
+  const hasRatedShutterLifeColumn = camColumns.some((col) => col.name === "rated_shutter_life");
+  if (!hasRatedShutterLifeColumn) {
+    db.exec(`
+      ALTER TABLE cameras ADD COLUMN rated_shutter_life INTEGER NOT NULL DEFAULT 200000;
+    `);
+  }
+
   const mrColumns = db
     .prepare("PRAGMA table_info(maintenance_records)")
     .all() as { name: string }[];
@@ -169,8 +179,8 @@ export function initDb(): void {
 
 function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensAccessories: boolean, seedUsageLogs: boolean): void {
   const insertCamera = db.prepare(`
-    INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertMaintenance = db.prepare(`
@@ -203,8 +213,8 @@ function seedData(seedCameras: boolean, seedMaintenanceTypes: boolean, seedLensA
     let cam2Id: number | bigint = 0;
 
     if (seedCameras) {
-      const cam1 = insertCamera.run("佳能", "Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "维修中");
-      const cam2 = insertCamera.run("新索尼", "Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机", "闲置");
+      const cam1 = insertCamera.run("佳能", "Canon EOS R5", "2022-03-15", 85000, "主力机身，风光拍摄", "维修中", 300000);
+      const cam2 = insertCamera.run("新索尼", "Sony A7 IV", "2023-08-20", 42000, "视频与街拍备用机", "闲置", 200000);
       cam1Id = cam1.lastInsertRowid;
       cam2Id = cam2.lastInsertRowid;
 
@@ -268,31 +278,41 @@ export function getAllCameras(options?: { status?: CameraStatus; modelKeyword?: 
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  return db.prepare(`SELECT * FROM cameras ${whereClause} ORDER BY id`).all(...params) as Camera[];
+  const rows = db.prepare(`SELECT * FROM cameras ${whereClause} ORDER BY id`).all(...params) as (Omit<Camera, "shutter_warning"> & { rated_shutter_life: number })[];
+  return rows.map((row) => ({
+    ...row,
+    shutter_warning: row.estimated_shutter_count >= row.rated_shutter_life * 0.8,
+  }));
 }
 
 export function getCameraById(id: number): Camera | undefined {
-  return db.prepare("SELECT * FROM cameras WHERE id = ?").get(id) as Camera | undefined;
+  const row = db.prepare("SELECT * FROM cameras WHERE id = ?").get(id) as (Omit<Camera, "shutter_warning"> & { rated_shutter_life: number }) | undefined;
+  if (!row) return undefined;
+  return {
+    ...row,
+    shutter_warning: row.estimated_shutter_count >= row.rated_shutter_life * 0.8,
+  };
 }
 
-export function createCamera(data: Omit<Camera, "id">): Camera {
+export function createCamera(data: Omit<Camera, "id" | "shutter_warning">): Camera {
+  const rated = data.rated_shutter_life ?? 200000;
   const result = db
     .prepare(
-      `INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO cameras (brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中");
+    .run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中", rated);
   return getCameraById(Number(result.lastInsertRowid))!;
 }
 
-export function updateCamera(id: number, data: Omit<Camera, "id">): Camera | undefined {
+export function updateCamera(id: number, data: Omit<Camera, "id" | "shutter_warning">): Camera | undefined {
   const existing = getCameraById(id);
   if (!existing) return undefined;
 
   db.prepare(
-    `UPDATE cameras SET brand = ?, model = ?, purchase_date = ?, estimated_shutter_count = ?, notes = ?, status = ?
+    `UPDATE cameras SET brand = ?, model = ?, purchase_date = ?, estimated_shutter_count = ?, notes = ?, status = ?, rated_shutter_life = ?
      WHERE id = ?`
-  ).run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中", id);
+  ).run(data.brand, data.model, data.purchase_date, data.estimated_shutter_count, data.notes, data.status ?? "使用中", data.rated_shutter_life ?? 200000, id);
 
   return getCameraById(id);
 }

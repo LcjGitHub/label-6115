@@ -36,6 +36,7 @@ const emptyForm: CameraFormData = {
   estimated_shutter_count: 0,
   notes: "",
   status: "使用中",
+  rated_shutter_life: 200000,
 };
 
 const statusColorMap: Record<CameraStatus, "success" | "warning" | "default"> = {
@@ -127,6 +128,21 @@ export default function CameraListPage() {
         headerName: "预估快门数",
         width: 120,
         type: "number",
+      },
+      {
+        field: "rated_shutter_life",
+        headerName: "额定寿命",
+        width: 120,
+        type: "number",
+      },
+      {
+        field: "shutter_warning",
+        headerName: "预警",
+        width: 90,
+        renderCell: (params) =>
+          params.value ? (
+            <Chip label="预警" color="error" size="small" />
+          ) : null,
       },
       {
         field: "status",
@@ -295,6 +311,14 @@ export default function CameraListPage() {
             value={form.estimated_shutter_count}
             onChange={(e) =>
               setForm({ ...form, estimated_shutter_count: Number(e.target.value) })
+            }
+          />
+          <TextField
+            label="额定快门寿命"
+            type="number"
+            value={form.rated_shutter_life}
+            onChange={(e) =>
+              setForm({ ...form, rated_shutter_life: Number(e.target.value) })
             }
           />
           <FormControl>

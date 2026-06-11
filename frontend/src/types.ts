@@ -10,6 +10,8 @@ export interface Camera {
   estimated_shutter_count: number;
   notes: string;
   status: CameraStatus;
+  rated_shutter_life: number;
+  shutter_warning: boolean;
 }
 
 export interface MaintenanceRecord {
@@ -27,6 +29,7 @@ export interface CameraFormData {
   estimated_shutter_count: number;
   notes: string;
   status: CameraStatus;
+  rated_shutter_life: number;
 }
 
 export interface MaintenanceFormData {

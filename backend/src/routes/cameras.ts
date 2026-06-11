@@ -38,7 +38,7 @@ router.get("/:id", (req, res) => {
 });
 
 router.post("/", (req, res) => {
-  const { brand, model, purchase_date, estimated_shutter_count, notes, status } = req.body;
+  const { brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life } = req.body;
   if (!brand || !model || !purchase_date) {
     res.status(400).json({ error: "品牌、型号和购入日期为必填项" });
     return;
@@ -54,13 +54,14 @@ router.post("/", (req, res) => {
     estimated_shutter_count: Number(estimated_shutter_count) || 0,
     notes: notes ?? "",
     status: (status as CameraStatus) ?? "使用中",
+    rated_shutter_life: Number(rated_shutter_life) || 200000,
   });
   res.status(201).json(camera);
 });
 
 router.put("/:id", (req, res) => {
   const id = Number(req.params.id);
-  const { brand, model, purchase_date, estimated_shutter_count, notes, status } = req.body;
+  const { brand, model, purchase_date, estimated_shutter_count, notes, status, rated_shutter_life } = req.body;
   if (!brand || !model || !purchase_date) {
     res.status(400).json({ error: "品牌、型号和购入日期为必填项" });
     return;
@@ -76,6 +77,7 @@ router.put("/:id", (req, res) => {
     estimated_shutter_count: Number(estimated_shutter_count) || 0,
     notes: notes ?? "",
     status: (status as CameraStatus) ?? "使用中",
+    rated_shutter_life: Number(rated_shutter_life) || 200000,
   });
   if (!camera) {
     res.status(404).json({ error: "相机不存在" });
